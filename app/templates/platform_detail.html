@@ -1,0 +1,624 @@
+{% extends "base.html" %} {% block title %}平台概览 - {{ platform_name }}{%
+endblock %} {% block crumb %}Platforms / {{ platform_name }}{% endblock %} {%
+block content %} {# --- 1. 数据配置区：已嵌入 SVG 图标 --- #} {#
+我们定义几个简单的 SVG 图标字符串，方便复用 #} {% set icon_link = '<svg
+  viewBox="0 0 24 24"
+  width="14"
+  height="14"
+  stroke="currentColor"
+  stroke-width="2"
+  fill="none"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+  <polyline points="15 3 21 3 21 9"></polyline>
+  <line x1="10" y1="14" x2="21" y2="3"></line></svg
+>' %} {% set icon_user = '<svg
+  viewBox="0 0 24 24"
+  width="14"
+  height="14"
+  stroke="currentColor"
+  stroke-width="2"
+  fill="none"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+  <circle cx="12" cy="7" r="4"></circle></svg
+>' %} {% set icon_plus = '<svg
+  viewBox="0 0 24 24"
+  width="14"
+  height="14"
+  stroke="currentColor"
+  stroke-width="2"
+  fill="none"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="12" y1="5" x2="12" y2="19"></line>
+  <line x1="5" y1="12" x2="19" y2="12"></line></svg
+>' %} {% set platform_links_map = { 'temu': [ {'label': '洛·注册', 'url':
+'https://seller-eu.temu.com/registration.html?merchant_exclusive_invitation_code=u62206f1cc259469',
+'type': 'primary'}, {'label': '卓·注册', 'url':
+'https://seller-eu.temu.com/registration.html?merchant_exclusive_invitation_code=u1e07b017cf31db4',
+'type': 'primary'} ], 'worten': [ {'label': '商家注册', 'url':
+'https://www.worten.pt/marketplace/vender-na-worten', 'type': 'primary'},
+{'label': 'Worten登录', 'url': 'https://marketplace.worten.pt/login', 'type':
+'secondary'}, {'label': 'Sonae登录', 'url': 'https://www.sonaelink.com/',
+'type': 'outline'} ], 'conforama': [ {'label': 'Mirakl登录', 'url':
+'https://conforama-prod.mirakl.net/login', 'type': 'secondary'} ], '乐华梅兰': [
+{'label': '申请入驻', 'url':
+'https://www.leroymerlin.fr/devenez-marchand-marketplace.html#component-contact',
+'type': 'primary'}, {'label': '官网登录', 'url':
+'https://marketplace.adeo.com/', 'type': 'secondary'}, {'label': '卖家门户',
+'url': 'https://adeo-marketplace.mirakl.net/login', 'type': 'outline'} ],
+'shein': [ {'label': '招商入驻', 'url': 'https://shein.top/mh8fui8', 'type':
+'primary'} ], 'etsy': [ {'label': '开店注册', 'url': 'https://www.etsy.com/',
+'type': 'primary'} ], 'cdon': [ {'label': '填写申请表', 'url':
+'https://airtable.com/app7APjrC8GznTzEU/pagYeyf3B58VQVWkf/form', 'type':
+'outline'} ], 'allegro': [ {'label': '立即注册', 'url':
+'https://allegro.pl/rejestracja/konto-firmowe/nowe-konto?affiliation=onboardingPL&hideAffiliationBaner=true',
+'type': 'primary'}, {'label': '人脸验证', 'url':
+'https://salescenter.allegro.com/registration/company-verification', 'type':
+'danger'} ], 'phh': [ {'label': '注册PMP', 'url':
+'https://pmp.pigugroup.eu/register?source=phh', 'type': 'primary'}, {'label':
+'入驻指引', 'url':
+'https://profile.detected.app/portal/find-company/phh-onboarding', 'type':
+'outline'} ], 'hood': [ {'label': 'Hood注册', 'url':
+'https://www.hood.de/hood-shop-einrichten.htm', 'type': 'primary'} ], 'tiktok':
+[ {'label': '德国区注册', 'url':
+'https://seller-de-accounts.tiktok.com/account/register?channel=AM_kongshuyun',
+'type': 'primary'}, {'label': '法国区注册', 'url':
+'https://seller-fr-accounts.tiktok.com/account/register?channel=AM_kongshuyun',
+'type': 'primary'} ], '速卖通': [ {'label': '官方入驻', 'url':
+'https://login.aliexpress.com/user/seller/registerNew?_regFrom=AE_MAINLAND&bizSegment=GSP&_locale=zh_CN&useThemeFlag=true',
+'type': 'primary'} ] } %} {% set current_links =
+platform_links_map.get(platform_name|lower) or
+platform_links_map.get(platform_name) %}
+
+<div class="dashboard-wrapper">
+  {# --- 2. 顶部头部区域 --- #}
+  <div class="page-header">
+    <div class="header-left">
+      <div class="platform-avatar">{{ platform_name[:1]|upper }}</div>
+      <div class="header-titles">
+        <h1>{{ platform_name }}</h1>
+        <span class="subtitle">关联公司 {{ rows|length }} 家</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <a class="nav-back" href="/ui/platforms">
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          stroke="currentColor"
+          stroke-width="2"
+          fill="none"
+        >
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        返回列表
+      </a>
+    </div>
+  </div>
+
+  {# --- 3. 快捷操作栏 (如果有链接) --- #} {% if current_links %}
+  <div class="action-bar">
+    <div class="action-label">快速通道</div>
+    <div class="action-buttons">
+      {% for link in current_links %} {% set btn_cls = 'btn-modern ' + link.type
+      %} {# 根据类型选择图标 #} {% set btn_icon = icon_link %} {% if link.type
+      == 'primary' %}{% set btn_icon = icon_plus %}{% endif %} {% if link.type
+      == 'secondary' %}{% set btn_icon = icon_user %}{% endif %}
+
+      <a href="{{ link.url }}" target="_blank" class="{{ btn_cls }}">
+        <span class="btn-icon">{{ btn_icon|safe }}</span>
+        {{ link.label }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %} {# --- 4. 搜索与表格区域 --- #}
+  <div class="content-card">
+    <div class="card-toolbar">
+      <div class="search-wrap">
+        <svg
+          class="search-icon"
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          stroke="currentColor"
+          stroke-width="2"
+          fill="none"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          id="companySearch"
+          type="text"
+          placeholder="搜索公司名称 / 域名..."
+          autocomplete="off"
+        />
+        <div class="search-counter" id="companyCountShown">
+          {{ rows|length }}
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table id="companyTable">
+        <thead>
+          <tr>
+            <th width="60">ID</th>
+            <th>公司名称</th>
+            <th width="100">国家</th>
+            <th>店铺/域名</th>
+            <th width="100">状态</th>
+            <th width="100">进度</th>
+            <th width="80" class="text-right">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr
+            class="company-row"
+            data-company="{{ (r.company_name or '')|lower }}"
+          >
+            <td class="muted-id">#{{ r.cp_id }}</td>
+            <td>
+              <div class="row-title">{{ r.company_name }}</div>
+            </td>
+            <td>
+              {% if r.country %}
+              <span class="tag-country">{{ r.country }}</span>
+              {% else %}
+              <span class="muted">-</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="row-sub">
+                {% if r.store_url %}<a
+                  href="{{ r.store_url }}"
+                  target="_blank"
+                  class="link-sub"
+                  >店铺链接</a
+                >{% endif %} {% if r.store_url and r.domain %}
+                <span class="divider">|</span> {% endif %} {% if r.domain %}{{
+                r.domain }}{% endif %} {% if not r.store_url and not r.domain
+                %}<span class="muted">-</span>{% endif %}
+              </div>
+            </td>
+            <td>
+              {% if r.status %}
+              <span class="status-dot"></span> {{ r.status }} {% else %}
+              <span class="muted">-</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="progress-bar-bg">
+                <div
+                  class="progress-bar-fill"
+                  style="width: {{ r.progress|default(0) }}%;"
+                ></div>
+              </div>
+              <div class="progress-text">{{ r.progress|default(0) }}%</div>
+            </td>
+            <td class="text-right">
+              <a
+                class="btn-icon-only"
+                href="/ui/company-platforms/{{ r.cp_id }}"
+                title="查看详情"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  fill="none"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div id="companyEmpty" class="empty-placeholder" style="display: none">
+        <svg
+          viewBox="0 0 24 24"
+          width="48"
+          height="48"
+          stroke="#cbd5e0"
+          stroke-width="1"
+          fill="none"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <p>未找到匹配的公司</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* --- Global Reset & Variables --- */
+  :root {
+    --primary-color: #3b82f6; /* Blue 500 */
+    --primary-hover: #2563eb;
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+  }
+
+  .dashboard-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      Helvetica, Arial, sans-serif;
+    color: var(--text-main);
+  }
+
+  /* --- Header --- */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 0;
+    border-bottom: 1px solid transparent;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .platform-avatar {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    font-size: 24px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+  }
+
+  .header-titles h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .nav-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-back:hover {
+    color: var(--text-main);
+  }
+
+  /* --- Action Bar (Links) --- */
+  .action-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  .action-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Modern Buttons */
+  .btn-modern {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+  .btn-icon {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Button Types */
+  .btn-modern.primary {
+    background-color: #3b82f6;
+    color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
+  .btn-modern.primary:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .btn-modern.secondary {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+  }
+  .btn-modern.secondary:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .btn-modern.outline {
+    background-color: transparent;
+    color: #64748b;
+    border-color: #cbd5e1;
+    border-style: dashed;
+  }
+  .btn-modern.outline:hover {
+    border-color: #94a3b8;
+    color: #334155;
+    background-color: #f8fafc;
+  }
+
+  .btn-modern.danger {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+  }
+  .btn-modern.danger:hover {
+    background-color: #fee2e2;
+  }
+
+  /* --- Content Card --- */
+  .content-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+  }
+
+  .card-toolbar {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: #fcfcfc;
+  }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+  }
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    color: #94a3b8;
+    pointer-events: none;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 10px 12px 10px 38px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  .search-counter {
+    position: absolute;
+    right: 12px;
+    font-size: 12px;
+    color: #cbd5e1;
+    font-weight: 600;
+  }
+
+  /* Table */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    text-align: left;
+    padding: 12px 20px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  td {
+    padding: 14px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    vertical-align: middle;
+  }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  tr:hover td {
+    background-color: #f8fafc;
+  }
+
+  /* Table Elements */
+  .muted-id {
+    color: #94a3b8;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .row-title {
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .tag-country {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .row-sub {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .link-sub {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+  .link-sub:hover {
+    text-decoration: underline;
+  }
+  .divider {
+    color: #e2e8f0;
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #10b981;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  /* Progress Bar */
+  .progress-bar-bg {
+    width: 80px;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 3px;
+  }
+  .progress-text {
+    display: inline-block;
+    font-size: 12px;
+    color: #64748b;
+    margin-left: 6px;
+    width: 30px;
+  }
+
+  .text-right {
+    text-align: right;
+  }
+  .btn-icon-only {
+    color: #94a3b8;
+    padding: 6px;
+    border-radius: 6px;
+    display: inline-block;
+    transition: all 0.2s;
+  }
+  .btn-icon-only:hover {
+    color: #3b82f6;
+    background: #eff6ff;
+  }
+
+  .empty-placeholder {
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+  }
+  .empty-placeholder p {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+</style>
+
+<script>
+  ;(function () {
+    const input = document.getElementById('companySearch')
+    const rows = Array.from(document.querySelectorAll('.company-row'))
+    const empty = document.getElementById('companyEmpty')
+    const shownEl = document.getElementById('companyCountShown')
+
+    function apply() {
+      const q = (input.value || '').trim().toLowerCase()
+      let shown = 0
+      rows.forEach((tr) => {
+        const name = tr.getAttribute('data-company') || ''
+        const ok = !q || name.includes(q)
+        tr.style.display = ok ? '' : 'none'
+        if (ok) shown++
+      })
+      if (shownEl) shownEl.textContent = String(shown)
+      if (empty)
+        empty.style.display = rows.length > 0 && shown === 0 ? '' : 'none'
+    }
+
+    if (input) {
+      apply()
+      input.addEventListener('input', apply)
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          input.value = ''
+          apply()
+        }
+      })
+    }
+  })()
+</script>
+{% endblock %}

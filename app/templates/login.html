@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>登录 - 斯本贸易</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #0b1020;
+        --card: rgba(255, 255, 255, 0.92);
+        --card2: #ffffff;
+        --text: #0f172a;
+        --muted: #64748b;
+        --border: rgba(15, 23, 42, 0.1);
+        --primary: #2563eb;
+        --primary2: #1d4ed8;
+        --danger: #b00020;
+        --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+        --radius: 18px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--text);
+        background: radial-gradient(
+            900px 500px at 12% 12%,
+            rgba(37, 99, 235, 0.35),
+            transparent 60%
+          ),
+          radial-gradient(
+            900px 500px at 85% 35%,
+            rgba(99, 102, 241, 0.2),
+            transparent 55%
+          ),
+          var(--bg);
+      }
+
+      .wrap {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 28px;
+      }
+
+      .card {
+        width: min(520px, 100%);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(10px);
+      }
+
+      .card-inner {
+        background: var(--card);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: calc(var(--radius) - 2px);
+      }
+
+      .header {
+        padding: 22px 22px 14px;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        color: #fff;
+        background: linear-gradient(
+          135deg,
+          rgba(37, 99, 235, 0.95),
+          rgba(99, 102, 241, 0.85)
+        );
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
+        user-select: none;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+      .subtitle {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .body {
+        padding: 18px 22px 22px;
+      }
+
+      .err {
+        margin: 0 0 12px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(176, 0, 32, 0.06);
+        color: var(--danger);
+        border: 1px solid rgba(176, 0, 32, 0.18);
+        font-size: 13px;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 10px 0 6px;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        outline: none;
+        font-size: 14px;
+        background: var(--card2);
+      }
+      input:focus {
+        border-color: rgba(37, 99, 235, 0.55);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
+      }
+
+      .btn {
+        width: 100%;
+        margin-top: 14px;
+        padding: 12px 14px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.22);
+        transition: transform 120ms ease, background 120ms ease;
+      }
+      .btn:hover {
+        background: var(--primary2);
+        transform: translateY(-1px);
+      }
+
+      .foot {
+        padding: 12px 22px 18px;
+        color: rgba(226, 232, 240, 0.92);
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.22);
+      }
+
+      .foot .brand {
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+
+      @media (max-width: 420px) {
+        .header {
+          padding: 18px 16px 12px;
+        }
+        .body {
+          padding: 14px 16px 16px;
+        }
+        .foot {
+          padding: 10px 16px 12px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div class="card-inner">
+          <div class="header">
+            <div class="logo">SI</div>
+            <div>
+              <h1 class="title">斯本贸易</h1>
+              <p class="subtitle">文档管理 · 内部后台登录</p>
+            </div>
+          </div>
+
+          <div class="body">
+            {% if error %}
+            <div class="err">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" action="/ui/login">
+              <label>用户名</label>
+              <input name="username" autocomplete="username" required />
+
+              <label>密码</label>
+              <input
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+
+              <button class="btn" type="submit">登录</button>
+            </form>
+          </div>
+
+          <div class="foot">
+            <span class="brand">斯本贸易</span>
+            <span>后端：FastAPI · 数据库：MySQL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

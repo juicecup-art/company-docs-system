@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}管理员 / 用户{% endblock %}
+{% block crumb %}Admin / User{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px;">
+    <div>
+      <h2 style="margin:0;">
+        {% if mode=='new' %}新增用户{% else %}编辑用户{% endif %}
+      </h2>
+      <div style="color:var(--muted); font-size:13px; margin-top:6px;">
+        {% if mode=='edit' %}用户ID：{{ row.id }}{% endif %}
+      </div>
+    </div>
+    <div>
+      <a class="btn" href="/ui/admin/users" style="text-decoration:none; white-space:nowrap;">返回列表</a>
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="alert alert-warn">{{ error }}</div>
+  {% endif %}
+
+  <div class="card" style="padding:16px;">
+    <form method="post"
+          action="{% if mode=='new' %}/ui/admin/users/new{% else %}/ui/admin/users/{{ row.id }}/edit{% endif %}">
+
+      <div class="form-grid">
+        <div class="field">
+          <label>用户名</label>
+          <input name="username" value="{{ row.username or '' }}" {% if mode=='edit' %}disabled{% endif %} required>
+          {% if mode=='edit' %}
+            <div class="help">用户名不可修改。</div>
+          {% endif %}
+        </div>
+
+        <div class="field">
+          <label>显示名</label>
+          <input name="display_name" value="{{ row.display_name or '' }}">
+        </div>
+
+        <div class="field">
+          <label>邮箱</label>
+          <input name="email" value="{{ row.email or '' }}">
+        </div>
+
+        <div class="field">
+          <label>电话</label>
+          <input name="phone" value="{{ row.phone or '' }}">
+        </div>
+
+        <div class="field">
+          <label>部门</label>
+          <input name="department" value="{{ row.department or '' }}">
+        </div>
+
+        <div class="field">
+          <label>角色</label>
+          <select name="role">
+            <option value="user" {% if (row.role or 'user')=='user' %}selected{% endif %}>普通用户</option>
+            <option value="admin" {% if (row.role or '')=='admin' %}selected{% endif %}>管理员</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>状态</label>
+          <select name="status">
+            <option value="1" {% if (row.status is not none and row.status|string)=='1' %}selected{% endif %}>启用</option>
+            <option value="0" {% if (row.status is not none and row.status|string)=='0' %}selected{% endif %}>停用</option>
+          </select>
+        </div>
+
+        {% if mode=='new' %}
+        <div class="field">
+          {% if mode=='new' %}
+          <div class="field">
+            <label>密码</label>
+            <input type="password" name="password" required>
+            <div class="help">至少 6 位</div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div><br>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">保存</button>
+        <a class="btn" href="/ui/admin/users" style="text-decoration:none;">取消</a>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

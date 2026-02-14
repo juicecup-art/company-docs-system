@@ -1,0 +1,274 @@
+{% extends "base.html" %} {% block title %}文档详情 - 斯本贸易{% endblock %} {%
+block crumb %}Documents / Detail{% endblock %} {% block content %}
+<style>
+  .page {
+    max-width: 1100px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-head h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 1000;
+  }
+  .head-meta {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 6px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .head-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .opbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .opbar form {
+    display: inline;
+    margin: 0;
+  }
+
+  .mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 1000;
+    font-size: 13px;
+    text-decoration: none;
+    transition: background 120ms ease, border-color 120ms ease,
+      transform 120ms ease;
+  }
+  .mini-btn:hover {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+  }
+  .mini-btn.primary {
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.22);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  .mini-btn.primary:hover {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+  .mini-btn.danger {
+    color: #b91c1c;
+    border-color: rgba(185, 28, 28, 0.2);
+    background: rgba(220, 38, 38, 0.04);
+  }
+  .mini-btn.danger:hover {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(185, 28, 28, 0.28);
+  }
+  .mini-btn.ok {
+    color: #15803d;
+    border-color: rgba(21, 128, 61, 0.18);
+    background: rgba(22, 163, 74, 0.05);
+  }
+  .mini-btn.ok:hover {
+    background: rgba(22, 163, 74, 0.1);
+    border-color: rgba(21, 128, 61, 0.28);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .kv {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+  .kv .k {
+    color: rgba(15, 23, 42, 0.45);
+    font-size: 12px;
+    margin-bottom: 6px;
+    font-weight: 1000;
+  }
+  .kv .v {
+    color: rgba(15, 23, 42, 0.88);
+    font-size: 14px;
+    font-weight: 1000;
+  }
+  .kv .v.muted {
+    color: rgba(15, 23, 42, 0.65);
+    font-weight: 900;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(15, 23, 42, 0.02);
+    color: rgba(15, 23, 42, 0.72);
+    font-size: 12px;
+    font-weight: 1000;
+    white-space: nowrap;
+  }
+  .pill.del {
+    border-color: rgba(176, 0, 32, 0.25);
+    background: rgba(176, 0, 32, 0.06);
+    color: #b00020;
+  }
+  .pill.soft {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+    color: rgba(37, 99, 235, 1);
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .head-actions {
+      margin-left: 0;
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
+</style>
+
+<div class="card">
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <h2>文档详情</h2>
+        <div class="head-meta">
+          <span>文档 ID：<b>{{ doc.id }}</b></span>
+          <span>
+            状态： {% if doc.is_deleted == 0 %}
+            <span class="pill">正常</span>
+            {% else %}
+            <span class="pill del">已删除</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="head-actions">
+        <a class="back muted" href="/ui/documents">返回列表</a>
+      </div>
+    </div>
+
+    <div class="opbar">
+      <a
+        class="btn"
+        href="/ui/documents/{{ doc.id }}/download"
+        style="text-decoration: none"
+        >下载</a
+      >
+
+      {% if doc.group_key %}
+      <a class="mini-btn primary" href="/ui/groups/{{ doc.group_key }}"
+        >版本历史</a
+      >
+      {% endif %} {% if doc.is_deleted == 0 %}
+      <form
+        method="post"
+        action="/ui/documents/{{ doc.id }}/delete"
+        onsubmit="return confirm('确定删除文档 id={{ doc.id }} ?');"
+      >
+        <button type="submit" class="mini-btn danger">删除</button>
+      </form>
+      {% else %}
+      <form
+        method="post"
+        action="/ui/documents/{{ doc.id }}/restore"
+        onsubmit="return confirm('确定恢复文档 id={{ doc.id }} ?');"
+      >
+        <button type="submit" class="mini-btn ok">恢复</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- ✅ 你指定的排列（不让标题独占） -->
+    <div class="grid">
+      <!-- 第一行：文件名 + 公司 -->
+      <div class="kv">
+        <div class="k">文件名</div>
+        <div class="v">{{ doc.title }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">公司</div>
+        <div class="v">{{ doc.company_name }}</div>
+        <div class="v muted" style="margin-top: 6px">
+          公司编号： {% if doc.company_code %} {{ doc.company_code }} {% else %}
+          {{ doc.company_id }} {% endif %}
+        </div>
+      </div>
+
+      <!-- 第二行：分类 + 文件类型 -->
+      <div class="kv">
+        <div class="k">分类</div>
+        <div class="v"><span class="pill">{{ doc.category }}</span></div>
+      </div>
+
+      <div class="kv">
+        <div class="k">文件类型</div>
+        {% if doc.file_type %}
+        <div class="v"><span class="pill soft">{{ doc.file_type }}</span></div>
+        {% else %}
+        <div class="v muted">—</div>
+        {% endif %}
+      </div>
+
+      <!-- 第三行：原文件名 + 上传人 -->
+      <div class="kv">
+        <div class="k">原文件名</div>
+        <div class="v muted">{{ doc.original_filename }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">上传人</div>
+        <div class="v muted">{{ doc.uploaded_by }}</div>
+      </div>
+
+      <!-- 第四行：更新时间 + 创建时间 -->
+      <div class="kv">
+        <div class="k">更新时间</div>
+        <div class="v muted">{{ doc.updated_at }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">创建时间</div>
+        <div class="v muted">{{ doc.created_at }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

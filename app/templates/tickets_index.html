@@ -1,0 +1,403 @@
+{# app/templates/tickets_index.html #}
+{% extends "base.html" %}
+
+{% block title %}工单中心 - 高效协作{% endblock %}
+{% block crumb %}工单管理 / 列表{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --brand: #6366f1;
+    --brand-hover: #4f46e5;
+    --bg-main: #f8fafc;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-light: #e2e8f0;
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --brand-light: rgba(99, 102, 241, 0.10);
+  }
+
+  .tix-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 28px; padding: 0 4px;
+  }
+  .tix-title h2 {
+    margin: 0; font-size: 26px; font-weight: 700; color: var(--text-main);
+    letter-spacing: -0.025em;
+  }
+  .tix-sub { margin-top: 6px; color: var(--text-muted); font-size: 14px; }
+  .tix-sub strong { color: var(--brand); font-weight: 600; }
+
+  .filter-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px; padding: 24px; margin-bottom: 24px;
+    box-shadow: var(--shadow-soft);
+  }
+  .tix-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; align-items: flex-end; }
+
+  .tix-field label {
+    display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;
+  }
+  .inp, .sel {
+    width: 100%; border: 1.5px solid var(--border-light); border-radius: 10px;
+    padding: 10px 14px; background: #fff; font-size: 14px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-main);
+  }
+  .inp:focus, .sel:focus {
+    border-color: var(--brand); outline: none;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .btn {
+    height: 42px; padding: 0 20px; border-radius: 10px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+    cursor: pointer; font-size: 14px; border: 1px solid transparent;
+    text-decoration: none;
+  }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); }
+  .btn-light { background: #fff; color: var(--text-main); border-color: var(--border-light); }
+  .btn-light:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+  .data-card {
+    background: #fff; border: 1px solid var(--border-light);
+    border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .tix-table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
+  .tix-table th {
+    background: #f8fafc; padding: 14px 20px; font-size: 12px;
+    font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .tix-table td { padding: 20px; border-bottom: 1px solid var(--border-light); vertical-align: middle; word-wrap: break-word; }
+  .tix-table tr:last-child td { border-bottom: none; }
+  .tix-table tr { transition: background 0.2s; }
+  .tix-table tr:hover td { background: #fbfcfe; }
+
+  .tix-title-link { font-weight: 600; color: var(--text-main); text-decoration: none; font-size: 15px; margin-bottom: 6px; display: inline-block; transition: color 0.2s; }
+  .tix-title-link:hover { color: var(--brand); }
+
+  .tag-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag {
+    font-size: 11px; padding: 2px 10px; border-radius: 6px;
+    background: var(--brand-light); color: var(--brand); font-weight: 600;
+    border: 1px solid rgba(99, 102, 241, 0.12);
+  }
+  .platform-tag { font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; }
+
+  /* ✅ 状态：不需要颜色（只保留轻标签样式） */
+  .status-plain {
+    display:inline-flex;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #334155;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+
+  /* ✅ 优先级：按工单详情同色系 */
+  .prio-pill{
+    display:inline-flex; align-items:center; justify-content:center;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 900;
+    border: 1px solid transparent;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .prio-urgent { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+  .prio-normal { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+  .prio-low    { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; }
+
+  .avatar-info { display: flex; align-items: center; gap: 12px; }
+  .avatar-circle {
+    width: 32px; height: 32px; border-radius: 10px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #475569; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .mono { font-family: 'Inter', 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted); }
+
+  /* 顶部状态 tabs */
+  .status-tabs{
+    display:flex; flex-wrap:wrap; gap:10px;
+    margin: 0 0 16px 0;
+    padding: 0 4px;
+  }
+  .status-tab{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 650;
+    transition: all .18s;
+  }
+  .status-tab:hover{
+    transform: translateY(-1px);
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15,23,42,.06);
+  }
+  .status-tab.active{
+    border-color: rgba(99,102,241,.45);
+    background: rgba(99,102,241,.08);
+    color: #4f46e5;
+  }
+  .status-dot{
+    width:8px; height:8px; border-radius:999px;
+    background: currentColor;
+    opacity:.8;
+  }
+  .st-count{
+    margin-left: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: rgba(15,23,42,.06);
+    color: var(--text-muted);
+    border: 1px solid rgba(15,23,42,.06);
+  }
+  .status-tab.active .st-count{
+    background: rgba(99,102,241,.12);
+    border-color: rgba(99,102,241,.18);
+    color: #4f46e5;
+  }
+  /* ✅ 与详情页一致的状态胶囊 */
+  .t-pill{
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+  }
+  .st-new{ background:#eff6ff; color:#2563eb; border-color:#dbeafe; }
+  .st-waiting{ background:#fff7ed; color:#ea580c; border-color:#ffedd5; }
+  .st-processing{ background:#f0f9ff; color:#0284c7; border-color:#e0f2fe; }
+  .st-solved{ background:#f0fdf4; color:#16a34a; border-color:#dcfce7; }
+  .st-closed{ background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }
+</style>
+
+<div class="tix-header">
+  <div class="tix-title">
+    <h2>工单中心</h2>
+    <div class="tix-sub">
+      当前系统中共有 <strong>{{ total }}</strong> 条记录
+    </div>
+  </div>
+  <div class="tix-actions">
+    <a class="btn btn-primary" href="/ui/tickets/new">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+      新建工单
+    </a>
+  </div>
+</div>
+
+{% set has_filter = (has_filter if has_filter is defined else True) %}
+
+{% set stv = (qv.status or '')|upper %}
+{% set sv = (qv.scope or 'all') %}
+{% set qtxt = (qv.q or '') %}
+{% set cv = (qv.category or '') %}
+{% set pv = (qv.priority or '') %}
+
+<div class="status-tabs">
+    <a class="status-tab {% if not stv %}active{% endif %}"
+       href="/ui/tickets?scope={{ sv }}&q={{ qtxt }}&category={{ cv }}&priority={{ pv }}">
+      <span class="status-dot"></span>
+      全部
+      <span class="st-count">{{ (status_counts.ALL if status_counts is defined else total) }}</span>
+    </a>
+  
+    {% for s in ALL_STATUSES %}
+      <a class="status-tab {% if stv==s %}active{% endif %}"
+         href="/ui/tickets?status={{ s }}&scope={{ sv }}&q={{ qtxt }}&category={{ cv }}&priority={{ pv }}">
+        <span class="status-dot"></span>
+        {{ STATUS_LABELS_ZH.get(s, s) if STATUS_LABELS_ZH is defined else s }}
+        <span class="st-count">{{ (status_counts.get(s, 0) if status_counts is defined else 0) }}</span>
+      </a>
+    {% endfor %}
+  </div>
+
+<form method="get" action="/ui/tickets" class="filter-card">
+  <div class="tix-row">
+    <div class="tix-field" style="grid-column: span 2;">
+      <label>搜索关键词</label>
+      <input class="inp" type="text" name="q" placeholder="单号、标题、公司名称..." value="{{ qtxt }}">
+    </div>
+
+    <div class="tix-field">
+      <label>任务类型</label>
+      <select class="sel" name="category">
+        <option value="" {% if not cv %}selected{% endif %}>全部类型</option>
+        {% for c in (categories or []) %}
+          <option value="{{ c }}" {% if cv==c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="tix-field">
+      <label>优先级</label>
+      {% set pv2 = (pv or '')|upper %}
+      <select class="sel" name="priority">
+        <option value="" {% if not pv2 %}selected{% endif %}>全部优先级</option>
+        <option value="URGENT" {% if pv2=='URGENT' %}selected{% endif %}>紧急</option>
+        <option value="NORMAL" {% if pv2=='NORMAL' %}selected{% endif %}>一般</option>
+        <option value="LOW" {% if pv2=='LOW' %}selected{% endif %}>不急</option>
+      </select>
+    </div>
+
+    <div class="tix-field">
+      <label>筛选范围</label>
+      <select class="sel" name="scope">
+        <option value="all" {% if sv=='all' %}selected{% endif %}>🌍 全部工单</option>
+        <option value="mine" {% if sv=='mine' %}selected{% endif %}>👤 我创建的</option>
+        <option value="assigned" {% if sv=='assigned' %}selected{% endif %}>📥 指派我的</option>
+      </select>
+    </div>
+
+    <div class="tix-actions" style="display:flex; gap:10px;">
+      <button class="btn btn-primary" type="submit" style="flex: 1;">查询</button>
+      <a class="btn btn-light" href="/ui/tickets" title="重置筛选">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      </a>
+    </div>
+  </div>
+</form>
+
+<div class="data-card">
+  <table class="tix-table">
+    <thead>
+      <tr>
+        <th style="width:130px;">工单编号</th>
+        <th>详细内容</th>
+        <th style="width:120px;">当前状态</th>
+        <th style="width:120px;">优先级</th>
+        <th style="width:140px;">任务类型</th>
+        <th style="width:160px;">负责人</th>
+        <th style="width:180px;">更新时间</th>
+      </tr>
+    </thead>
+
+    {% set st_label_map = {
+      'UNRECEIVED': '未接收',
+      'WAITING': '等待中',
+      'PROCESSING': '处理中',
+      'SOLVED': '已解决',
+      'CLOSED': '已关闭'
+    } %}
+
+    <tbody>
+      {% if rows and rows|length %}
+        {% for t in rows %}
+          <tr>
+            <td class="mono">
+              <a href="/ui/tickets/{{ t.id }}" style="color: var(--brand); font-weight: 700; text-decoration: none;">
+                {{ t.ticket_no }}
+              </a>
+            </td>
+
+            <td>
+              <a class="tix-title-link" href="/ui/tickets/{{ t.id }}">{{ t.title }}</a>
+              <div class="tag-group">
+                {% if t.company_name %}<span class="tag">{{ t.company_name }}</span>{% endif %}
+                {% if t.platform_name %}
+                  <span class="platform-tag">{{ t.platform_name }}</span>
+                {% endif %}
+              </div>
+            </td>
+
+            <!-- ✅ 当前状态：不需要颜色 -->
+            {% set st_map = {
+                'UNRECEIVED': {'label': '未接收', 'cls': 'st-unreceived'},
+                'WAITING': {'label': '等待中', 'cls': 'st-waiting'},
+                'PROCESSING': {'label': '处理中', 'cls': 'st-processing'},
+                'SOLVED': {'label': '已解决', 'cls': 'st-solved'},
+                'CLOSED': {'label': '已关闭', 'cls': 'st-closed'}
+              } %}
+              
+              <td>
+                {% set st = (t.status or 'WAITING')|upper %}
+                {% set st_info = st_map.get(st, st_map['WAITING']) %}
+                <span class="t-pill {{ st_info.cls }}">{{ st_info.label }}</span>
+              </td>
+              <td>
+              {% set pr = (t.priority or 'NORMAL')|upper %}
+              {% if pr=='URGENT' %}
+                <span class="prio-pill prio-urgent">紧急</span>
+              {% elif pr=='LOW' %}
+                <span class="prio-pill prio-low">不紧急</span>
+              {% else %}
+                <span class="prio-pill prio-normal">一般</span>
+              {% endif %}
+            </td>
+
+            <!-- ✅ 任务类型（紧挨优先级） -->
+            <td>
+              {% if t.category %}
+                <span class="tag" style="background:#f1f5f9; color:#475569; border-color:#e2e8f0;">
+                  {{ t.category }}
+                </span>
+              {% else %}
+                <span style="color:#94a3b8;">-</span>
+              {% endif %}
+            </td>
+
+            <td>
+              <div class="avatar-info">
+                <div class="avatar-circle">
+                  {{ (t.primary_assignee_name or '待')[0] }}
+                </div>
+                <span style="font-size:14px; color:var(--text-main); font-weight: 600;">
+                  {{ t.primary_assignee_name or '待分配' }}
+                </span>
+              </div>
+            </td>
+
+            <td class="mono" style="font-size: 12px;">
+              {{ (t.last_mark_at or t.updated_at or t.created_at) }}
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="7">
+            <div style="text-align:center; padding: 80px 0;">
+              <svg width="48" height="48" fill="none" stroke="#e2e8f0" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom: 16px;"><path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2m16 0h-4m-8 0H4m8 0v4m0 0h4m-4 0H8"></path></svg>
+              <p style="color: var(--text-muted); font-size: 15px;">未找到符合条件的工单记录</p>
+              <a href="/ui/tickets" style="color: var(--brand); font-size: 14px; text-decoration: none; font-weight: 700;">清空筛选条件</a>
+            </div>
+          </td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  document.querySelectorAll('.tix-table tbody tr').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
+        const link = row.querySelector('.tix-title-link');
+        if (link) link.click();
+      }
+    });
+  });
+</script>
+{% endblock %}

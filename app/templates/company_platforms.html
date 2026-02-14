@@ -1,0 +1,236 @@
+{% extends "base.html" %} {% block title %}公司平台 - 斯本贸易{% endblock %} {%
+block crumb %}Companies / Platforms{% endblock %} {% block content %}
+
+<style>
+  /* 本页专用：更松的层级与布局 */
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .page-head h2 {
+    margin: 0;
+  }
+  .head-meta {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .head-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .panel {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+  }
+
+  @media (max-width: 980px) {
+    .form-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 720px) {
+    .head-actions {
+      margin-left: 0;
+      justify-content: flex-start;
+      width: 100%;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* 操作按钮更克制（不改功能） */
+  td.actions {
+    white-space: nowrap;
+  }
+  .mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+    text-decoration: none;
+    transition: background 120ms ease, border-color 120ms ease,
+      transform 120ms ease;
+  }
+  .mini-btn:hover {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+  }
+  .mini-btn.primary {
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.22);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  .mini-btn.primary:hover {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+  .mini-btn.danger {
+    color: #b91c1c;
+    border-color: rgba(185, 28, 28, 0.2);
+    background: rgba(220, 38, 38, 0.04);
+  }
+  .mini-btn.danger:hover {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(185, 28, 28, 0.28);
+  }
+
+  .actions form {
+    display: inline;
+    margin: 0;
+  }
+  table th,
+  table td {
+    padding: 12px 12px;
+  }
+</style>
+
+<div class="card">
+  <!-- Header -->
+  <div class="page-head">
+    <div>
+      <h2>公司平台</h2>
+      <div class="head-meta">
+        公司：<b>{{ company.company_name }}</b>（ID：{{ company.id }}）
+      </div>
+    </div>
+
+    <div class="head-actions">
+      <!-- ✅ 全站统一返回样式 -->
+      <a class="back muted" href="/ui/companies/{{ company.id }}/edit"
+        >← 返回公司编辑</a
+      >
+    </div>
+  </div>
+
+  <p class="hint2" style="margin-top: 10px">
+    company_platforms：新增/删除；“设主”=让该平台成为最新一条（主平台）。
+  </p>
+
+  <!-- Add Panel -->
+  <div class="panel">
+    <form method="post" action="/ui/companies/{{ company.id }}/platforms/add">
+      <div class="form-grid">
+        <div>
+          <label>平台名称（platform_name） *</label>
+          <input
+            name="platform_name"
+            placeholder="例如 Amazon / eMAG / Shopify"
+            required
+          />
+        </div>
+
+        <div>
+          <label>店铺链接（store_url）</label>
+          <input name="store_url" placeholder="https://..." />
+        </div>
+
+        <div>
+          <label>域名（domain）</label>
+          <input name="domain" placeholder="example.com" />
+        </div>
+
+        <div>
+          <button class="btn" type="submit">新增平台</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="muted" style="margin-top: 12px">
+    结果：<b>{{ rows | length }}</b>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 70px">ID</th>
+        <th style="width: 180px">平台</th>
+        <th>店铺链接</th>
+        <th style="width: 220px">域名</th>
+        <th style="width: 170px">创建时间</th>
+        <th style="width: 200px">操作</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="muted">{{ r.id }}</td>
+
+        <td>
+          <b>{{ r.platform_name }}</b>
+          {% if primary_id == r.id %}
+          <span class="pill" style="margin-left: 8px">PRIMARY</span>
+          {% endif %}
+        </td>
+
+        <td class="muted">{{ r.store_url }}</td>
+        <td class="muted">{{ r.domain }}</td>
+        <td class="muted">{{ r.created_at }}</td>
+
+        <td class="actions">
+          <a
+            class="mini-btn"
+            href="/ui/companies/{{ company.id }}/platforms/{{ r.id }}"
+            >详情</a
+          >
+          {% if primary_id != r.id %}
+          <form
+            method="post"
+            action="/ui/companies/{{ company.id }}/platforms/{{ r.id }}/make-primary"
+            onsubmit="return confirm('设为主平台（会复制为最新一条）?');"
+          >
+            <button type="submit" class="mini-btn primary">设为主平台</button>
+          </form>
+          {% endif %}
+
+          <form
+            method="post"
+            action="/ui/companies/{{ company.id }}/platforms/{{ r.id }}/delete"
+            onsubmit="return confirm('确定删除该平台记录?');"
+            style="margin-left: 8px"
+          >
+            <button type="submit" class="mini-btn danger">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if rows|length == 0 %}
+  <p class="muted" style="margin-top: 12px">暂无平台记录。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,307 @@
+{% extends "base.html" %} {% block title %}收款平台 - {{ payment_name }}{%
+endblock %} {% block crumb %}Payments / {{ payment_name }}{% endblock %} {%
+block content %}
+
+<style>
+  /* ✅ 延续你“公司平台”页面风格 */
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .page-head h2 {
+    margin: 0;
+  }
+  .head-meta {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .head-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .panel {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+  }
+
+  @media (max-width: 980px) {
+    .form-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 720px) {
+    .head-actions {
+      margin-left: 0;
+      justify-content: flex-start;
+      width: 100%;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  table th,
+  table td {
+    padding: 12px 12px;
+  }
+
+  td.actions {
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+    text-decoration: none;
+    transition: background 120ms ease, border-color 120ms ease,
+      transform 120ms ease;
+  }
+  .mini-btn:hover {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+  }
+  .mini-btn.primary {
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.22);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  .mini-btn.primary:hover {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: rgba(15, 23, 42, 0.02);
+    font-size: 12px;
+    font-weight: 800;
+    color: rgba(15, 23, 42, 0.75);
+  }
+  .pill.blue {
+    border-color: rgba(37, 99, 235, 0.18);
+    background: rgba(37, 99, 235, 0.06);
+    color: #1e40af;
+  }
+
+  .t-name {
+    font-weight: 900;
+    color: rgba(15, 23, 42, 0.92);
+    font-size: 14px;
+  }
+  .t-muted {
+    color: rgba(15, 23, 42, 0.6);
+    font-weight: 500;
+    font-size: 13px;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+</style>
+
+{# ============================================================
+变量约定（后端传入）： - payment_name: 当前收款平台名，例如 "Skyee" - rows:
+该收款平台关联公司列表 每行建议字段： company_id, company_name, country,
+company_code, bind_status(可选), last_updated(可选), note(可选) -
+如果你暂时没后端，也可以先用空列表不报错
+============================================================ #} {% set rows =
+rows or [] %}
+
+<div class="card">
+  <!-- Header -->
+  <div class="page-head">
+    <div>
+      <h2>收款平台：{{ payment_name }}</h2>
+      <div class="head-meta">
+        点击公司名称进入：该公司在「{{ payment_name }}」下的收款详情。
+      </div>
+    </div>
+
+    <div class="head-actions">
+      <a class="back muted" href="/ui/payments">← 返回收款平台列表</a>
+    </div>
+  </div>
+
+  <p class="hint2" style="margin-top: 10px">
+    关联公司列表（按后端返回）：可搜索过滤；“详情”进入公司在该收款平台下的信息页。
+  </p>
+
+  <!-- Search Panel -->
+  <div class="panel">
+    <div class="form-grid">
+      <div>
+        <label>搜索公司</label>
+        <input
+          id="companySearch"
+          class="search-input"
+          placeholder="公司名 / 公司编号 / 国家"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="muted" style="font-size: 13px; line-height: 1.6">
+        结果：<b id="countShown">{{ rows|length }}</b> /
+        <b>{{ rows|length }}</b>
+      </div>
+
+      <div>
+        <button class="btn" type="button" onclick="clearSearch()">清空</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="muted" style="margin-top: 12px">
+    结果：<b id="countShown2">{{ rows|length }}</b>
+  </div>
+
+  <table id="companyTable">
+    <thead>
+      <tr>
+        <th style="width: 80px">公司ID</th>
+        <th>公司名称</th>
+        <th style="width: 110px">国家</th>
+        <th style="width: 120px">公司编号</th>
+        <th style="width: 140px">状态</th>
+        <th style="width: 180px">最近更新</th>
+        <th style="width: 120px; text-align: right">操作</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for r in rows %} {% set key = ((r.company_name or '') ~ ' ' ~
+      (r.company_code or '') ~ ' ' ~ (r.country or ''))|lower %}
+      <tr class="company-row" data-key="{{ key }}">
+        <td class="t-muted">#{{ r.company_id }}</td>
+
+        <td>
+          <a
+            href="/ui/payments/{{ payment_name }}/companies/{{ r.company_id }}"
+            style="text-decoration: none; color: inherit"
+          >
+            <span class="t-name">{{ r.company_name or '-' }}</span>
+          </a>
+        </td>
+
+        <td class="t-muted">
+          {% if r.country %}
+          <span class="pill blue">{{ r.country }}</span>
+          {% else %} - {% endif %}
+        </td>
+
+        <td class="t-muted">{{ r.company_code or '-' }}</td>
+
+        <td class="t-muted">
+          {% if r.bind_status %}
+          <span class="pill">{{ r.bind_status }}</span>
+          {% else %}
+          <span class="t-muted">-</span>
+          {% endif %}
+        </td>
+
+        <td class="t-muted" style="font-size: 12px">
+          {{ r.last_updated or '-' }}
+        </td>
+
+        <td class="actions">
+          <a
+            class="mini-btn primary"
+            href="/ui/payments/{{ payment_name }}/companies/{{ r.company_id }}"
+          >
+            详情
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if rows|length == 0 %}
+  <p class="muted" style="margin-top: 12px">暂无关联公司。</p>
+  {% endif %}
+
+  <div id="emptyBox" class="muted" style="margin-top: 12px; display: none">
+    没有匹配的公司。
+  </div>
+</div>
+
+<script>
+  ;(function () {
+    const input = document.getElementById('companySearch')
+    const rows = Array.from(document.querySelectorAll('.company-row'))
+    const empty = document.getElementById('emptyBox')
+    const shown1 = document.getElementById('countShown')
+    const shown2 = document.getElementById('countShown2')
+
+    function apply() {
+      const q = (input && input.value ? input.value : '').trim().toLowerCase()
+      let shown = 0
+
+      rows.forEach((tr) => {
+        const key = (tr.getAttribute('data-key') || '').toLowerCase()
+        const ok = !q || key.includes(q)
+        tr.style.display = ok ? '' : 'none'
+        if (ok) shown++
+      })
+
+      if (shown1) shown1.textContent = String(shown)
+      if (shown2) shown2.textContent = String(shown)
+      if (empty)
+        empty.style.display = rows.length > 0 && shown === 0 ? '' : 'none'
+    }
+
+    window.clearSearch = function () {
+      if (input) input.value = ''
+      apply()
+    }
+
+    if (input) {
+      apply()
+      input.addEventListener('input', apply)
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          input.value = ''
+          apply()
+        }
+      })
+    }
+  })()
+</script>
+
+{% endblock %}

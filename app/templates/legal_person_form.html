@@ -1,0 +1,400 @@
+{% extends "base.html" %} {% block title %}{% if mode=="new" %}新建{% else
+%}编辑{% endif %}法人/自然人 - 斯本贸易{% endblock %} {% block crumb %}Legal
+Persons / Form{% endblock %} {% block content %}
+
+<style>
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .page-head h2 {
+    margin: 0;
+  }
+  .head-meta {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 6px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .head-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .panel {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+  .panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .panel-title h3 {
+    margin: 0;
+    font-size: 14px;
+  }
+  .panel-title .muted {
+    font-size: 12px;
+  }
+
+  /* ✅ 按“公司详情”那种方式：3列 */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    align-items: end;
+  }
+  .span3 {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 900px) {
+    .head-actions {
+      margin-left: 0;
+      justify-content: flex-start;
+      width: 100%;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    .span3 {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .warn {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(220, 38, 38, 0.18);
+    background: rgba(220, 38, 38, 0.06);
+    color: #b00020;
+    font-weight: 800;
+  }
+
+  .form-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+    text-decoration: none;
+    transition: background 120ms ease, border-color 120ms ease,
+      transform 120ms ease;
+  }
+  .mini-btn:hover {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+  }
+
+  .readonly input[disabled] {
+    background: rgba(255, 255, 255, 0.6);
+    color: rgba(15, 23, 42, 0.65);
+    cursor: not-allowed;
+  }
+</style>
+
+{# ===== 权限判断：新建默认可写；编辑要看 can_edit ===== #} {% set can_write =
+true %} {% if mode == "edit" and (can_edit is defined) and (not can_edit) %} {%
+set can_write = false %} {% endif %}
+
+<div
+  class="card {% if not can_write %}readonly{% endif %}"
+  style="max-width: 980px"
+>
+  <div class="page-head">
+    <div>
+      <h2>{% if mode=="new" %}新建{% else %}编辑{% endif %}法人/自然人</h2>
+      <div class="head-meta">
+        {% if person.id %}
+        <span>人员 ID：<b>{{ person.id }}</b></span>
+        {% endif %} {% if person.deleted_at %}
+        <span
+          class="pill"
+          style="border-color: rgba(176, 0, 32, 0.25); color: #b00020"
+          >已删除</span
+        >
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="head-actions">
+      {% if company %}
+      <a class="back muted" href="/ui/companies/{{ company.id }}/legal-persons"
+        >← 返回该公司法人列表</a
+      >
+      {% else %}
+      <a class="back muted" href="/ui/legal-persons">← 返回法人/自然人列表</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not can_write %}
+  <div class="warn">你没有“编辑”权限：当前为只读查看模式。</div>
+  {% endif %}
+
+  <form method="post" action="/ui/legal-persons/save" style="margin-top: 12px">
+    <input type="hidden" name="person_id" value="{{ person.id or '' }}" />
+
+    <!-- 基本信息 -->
+    <div class="panel">
+      <div class="panel-title">
+        <h3>基本信息</h3>
+      </div>
+
+      <div class="form-grid">
+        <!-- 第1行：姓名（整行） -->
+        <div class="span3">
+          <label>姓名 *</label>
+          <input
+            name="full_name"
+            value="{{ person.full_name or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+            {%
+            if
+            can_write
+            %}required{%
+            endif
+            %}
+          />
+        </div>
+
+        <!-- 第2行：姓 / 名 / 中间名 -->
+        <div>
+          <label>姓</label>
+          <input
+            name="last_name"
+            value="{{ person.last_name or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+
+        <div>
+          <label>名</label>
+          <input
+            name="first_name"
+            value="{{ person.first_name or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+
+        <div>
+          <label>中间名</label>
+          <input
+            name="middle_name"
+            value="{{ person.middle_name or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+
+        <!-- 第4行：国籍 / 出生日期 / 邮编 -->
+        <div>
+          <label>国籍</label>
+          <input
+            name="nationality"
+            value="{{ person.nationality or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+
+        <div>
+          <label>出生日期</label>
+          <input
+            name="birthday"
+            value="{{ person.birthday or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+            placeholder="YYYY-MM-DD"
+          />
+        </div>
+
+        <div>
+          <label>邮编</label>
+          <input
+            name="postal_code"
+            value="{{ person.postal_code or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+
+        <!-- 第5行：地址（整行） -->
+        <div class="span3">
+          <label>法人地址</label>
+          <input
+            name="legal_address"
+            value="{{ person.legal_address or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 证件信息（不变） -->
+    <div class="panel">
+      <div class="panel-title">
+        <h3>证件信息</h3>
+        <span class="muted">身份证 / 护照</span>
+      </div>
+
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 14px">
+        <div>
+          <label>身份证号</label>
+          <input
+            name="id_number"
+            value="{{ person.id_number or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+
+        <div>
+          <label>身份证到期</label>
+          <input
+            name="id_expiry_date"
+            value="{{ person.id_expiry_date or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+            placeholder="YYYY-MM-DD"
+          />
+        </div>
+
+        <div>
+          <label>护照号</label>
+          <input
+            name="passport_number"
+            value="{{ person.passport_number or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+          />
+        </div>
+
+        <div>
+          <label>护照到期</label>
+          <input
+            name="passport_expiry_date"
+            value="{{ person.passport_expiry_date or '' }}"
+            {%
+            if
+            not
+            can_write
+            %}disabled{%
+            endif
+            %}
+            placeholder="YYYY-MM-DD"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作 -->
+    <div class="form-actions">
+      {% if can_write %}
+      <button class="btn" type="submit">保存</button>
+      {% endif %} {% if company %}
+      <a class="mini-btn" href="/ui/companies/{{ company.id }}/legal-persons"
+        >返回该公司</a
+      >
+      {% else %}
+      <a class="mini-btn" href="/ui/legal-persons">返回列表</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{% endblock %}

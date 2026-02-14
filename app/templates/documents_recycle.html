@@ -1,0 +1,324 @@
+{% extends "base.html" %} {% block title %}Documents / Recycle Bin{% endblock %}
+{% block crumb %}Documents / Recycle Bin{% endblock %} {% block content %}
+<div class="page">
+  <div
+    style="
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    "
+  >
+    <div>
+      <h2 style="margin: 0">回收站</h2>
+      <div style="color: var(--muted); font-size: 13px; margin-top: 6px">
+        自动清理规则：软删除后保留
+        <b>{{ retention_days }}</b> 天，到期会被定时清理（不可恢复）
+      </div>
+      {% if msg %}
+      <div
+        style="
+          margin-top: 10px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          background: rgba(0, 0, 0, 0.04);
+        "
+      >
+        {{ msg }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div
+      style="
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      "
+    >
+      <a class="btn" href="/ui/documents" style="text-decoration: none"
+        >文档列表</a
+      >
+      <a class="btn" href="/ui/documents/recycle" style="text-decoration: none"
+        >回收站</a
+      >
+    </div>
+  </div>
+
+  <form id="bulkForm" method="post">
+    <!-- 批量工具条 -->
+    <div
+      style="
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.03);
+        margin-bottom: 12px;
+      "
+    >
+      <label
+        style="display: flex; align-items: center; gap: 8px; cursor: pointer"
+      >
+        <input type="checkbox" id="checkAll" />
+        <span>全选</span>
+      </label>
+
+      <div style="color: var(--muted); font-size: 13px">
+        <span id="selCount">已选 0</span>
+      </div>
+
+      <button
+        type="submit"
+        formaction="/ui/documents/bulk-restore"
+        class="btn"
+        style="margin-left: 6px"
+        onclick="return confirmBulkRestore();"
+      >
+        批量恢复
+      </button>
+
+      {% if current_user and current_user.role == "admin" %}
+      <button
+        type="submit"
+        formaction="/ui/documents/bulk-hard-delete"
+        class="btn hard"
+        onclick="return confirm('⚠️ 批量硬删除不可恢复，确认？');"
+      >
+        批量硬删除（Admin）
+      </button>
+      {% endif %}
+
+      <div style="flex: 1"></div>
+
+      <div style="color: var(--muted); font-size: 12px">
+        提示：倒计时每 30 秒自动刷新
+      </div>
+    </div>
+
+    <div class="card" style="border-radius: 16px; overflow: hidden">
+      <table class="table" style="width: 100%">
+        <thead>
+          <tr>
+            <th style="width: 44px"></th>
+            <th style="width: 70px">ID</th>
+            <th>文件</th>
+            <th style="width: 190px">删除时间</th>
+            <th style="width: 190px">预计清理时间</th>
+            <th style="width: 160px">倒计时</th>
+            <th style="width: 220px">操作</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% if not rows or rows|length == 0 %}
+          <tr>
+            <td
+              colspan="7"
+              style="padding: 18px; color: var(--muted); text-align: center"
+            >
+              回收站为空
+            </td>
+          </tr>
+          {% else %} {% for r in rows %}
+          <tr>
+            <td>
+              <input
+                type="checkbox"
+                name="ids"
+                value="{{ r.id }}"
+                class="chk"
+              />
+            </td>
+
+            <td>{{ r.id }}</td>
+
+            <td>
+              <div style="font-weight: 600">{{ r.original_filename }}</div>
+              <div
+                style="color: var(--muted); font-size: 12px; margin-top: 3px"
+              >
+                Company ID: {{ r.company_id }}
+              </div>
+            </td>
+
+            <td style="font-variant-numeric: tabular-nums">
+              {{ r.deleted_at }}
+            </td>
+
+            <td style="font-variant-numeric: tabular-nums">{{ r.purge_at }}</td>
+
+            <!-- 倒计时：关键 data-purge-at -->
+            <td
+              class="countdown"
+              data-purge-at="{{ r.purge_at }}"
+              style="font-variant-numeric: tabular-nums"
+            >
+              <div class="cd-text">--</div>
+              <div
+                class="cd-hint"
+                style="font-size: 12px; color: var(--muted); margin-top: 4px"
+              ></div>
+            </td>
+
+            <td>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                <form
+                  method="post"
+                  action="/ui/documents/{{ r.id }}/restore"
+                  style="margin: 0"
+                >
+                  <button type="submit" class="btn">恢复</button>
+                </form>
+
+                {% if current_user and current_user.role == "admin" %}
+                <form
+                  method="post"
+                  action="/ui/documents/{{ r.id }}/hard-delete"
+                  style="margin: 0"
+                  onsubmit="return confirm('⚠️ 硬删除不可恢复，确认？');"
+                >
+                  <button type="submit" class="btn hard">硬删除</button>
+                </form>
+                {% else %}
+                <button
+                  type="button"
+                  class="btn ghost"
+                  disabled
+                  title="仅管理员可硬删除"
+                >
+                  硬删除
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %} {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+
+<script>
+  /** =========================
+   *  Bulk select
+   * ========================= */
+  ;(function () {
+    const checkAll = document.getElementById('checkAll')
+    const selCount = document.getElementById('selCount')
+
+    function getChks() {
+      return Array.from(document.querySelectorAll('.chk'))
+    }
+
+    function refreshCount() {
+      const n = getChks().filter((x) => x.checked).length
+      selCount.textContent = `已选 ${n}`
+      // 同步全选勾选状态
+      const all = getChks()
+      if (all.length > 0) {
+        checkAll.checked = all.every((x) => x.checked)
+        checkAll.indeterminate = !checkAll.checked && all.some((x) => x.checked)
+      }
+    }
+
+    checkAll.addEventListener('change', () => {
+      getChks().forEach((x) => (x.checked = checkAll.checked))
+      refreshCount()
+    })
+
+    getChks().forEach((x) => x.addEventListener('change', refreshCount))
+    refreshCount()
+
+    window.confirmBulkRestore = function () {
+      const n = getChks().filter((x) => x.checked).length
+      if (n <= 0) {
+        alert('⚠️ 未选择任何文档')
+        return false
+      }
+      return confirm(`确认批量恢复 ${n} 个文档？`)
+    }
+  })()
+</script>
+
+<script>
+  /** =========================
+   *  Countdown auto refresh
+   *  - refresh every 30 seconds
+   * ========================= */
+  ;(function () {
+    function pad(n) {
+      return String(n).padStart(2, '0')
+    }
+
+    function toDateSafe(s) {
+      if (!s) return null
+      // MySQL DATETIME: "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SS"
+      const iso = s.includes(' ') ? s.replace(' ', 'T') : s
+      const d = new Date(iso)
+      if (isNaN(d.getTime())) return null
+      return d
+    }
+
+    function renderCell(td) {
+      const purgeAtStr = td.getAttribute('data-purge-at') || ''
+      const purgeAt = toDateSafe(purgeAtStr)
+      if (!purgeAt) return
+
+      const now = new Date()
+      let diffMs = purgeAt.getTime() - now.getTime()
+
+      const textEl = td.querySelector('.cd-text')
+      const hintEl = td.querySelector('.cd-hint')
+
+      if (diffMs <= 0) {
+        textEl.textContent = '00d 00h 00m'
+        hintEl.textContent = '已到期/可清理'
+        hintEl.style.color = '#d11'
+        return
+      }
+
+      const totalMin = Math.floor(diffMs / 60000)
+      const d = Math.floor(totalMin / (24 * 60))
+      const h = Math.floor((totalMin % (24 * 60)) / 60)
+      const m = totalMin % 60
+
+      textEl.textContent = `${pad(d)}d ${pad(h)}h ${pad(m)}m`
+      hintEl.textContent = ''
+      hintEl.style.color = 'var(--muted)'
+    }
+
+    function tick() {
+      document.querySelectorAll('td.countdown').forEach(renderCell)
+    }
+
+    tick()
+    setInterval(tick, 1000 * 30)
+  })()
+</script>
+
+<style>
+  /* 轻量 UI 微调：不影响你现有全局样式 */
+  .table th,
+  .table td {
+    padding: 14px 12px;
+    vertical-align: middle;
+  }
+  .btn.ghost {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .btn.hard {
+    background: #1f5eff;
+    color: #fff;
+    border: 0;
+  }
+  .btn.hard:hover {
+    filter: brightness(0.95);
+  }
+</style>
+{% endblock %}

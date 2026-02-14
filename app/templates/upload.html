@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}上传 - 斯本贸易{% endblock %}
+{% block crumb %}Upload{% endblock %}
+
+{% block content %}
+<style>
+  /* ===== 统一文字等级（深->浅） ===== */
+  :root{
+    --ink-1: rgba(15,23,42,.95); /* 主标题/关键文字 */
+    --ink-2: rgba(15,23,42,.82); /* 正文/字段值 */
+    --ink-3: rgba(15,23,42,.62); /* 次要说明 */
+    --ink-4: rgba(15,23,42,.50); /* label */
+    --ink-5: rgba(15,23,42,.35); /* placeholder/更弱 */
+    --line-1: rgba(15,23,42,.10);
+  }
+
+  .page-head{
+    display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap;
+    padding-bottom:12px; border-bottom:1px solid var(--border); margin-bottom:12px;
+  }
+
+  /* ✅ 标题最深 */
+  .page-head h2{
+    margin:0;
+    font-size:22px;
+    font-weight:1000;
+    color: var(--ink-1);
+    letter-spacing: .2px;
+  }
+
+  /* ✅ 小标题说明：比 muted 深一点 */
+  .head-desc{
+    margin-top:6px;
+    color: var(--ink-3);
+    font-size:13px;
+    line-height:1.65;
+    font-weight:700;
+  }
+
+  .head-actions{
+    margin-left:auto; display:flex; align-items:center; gap:10px;
+    flex-wrap:wrap; justify-content:flex-end;
+  }
+
+  /* ✅ 返回链接：默认浅，hover 更深 */
+  .back{
+    text-decoration:none;
+    color: var(--ink-3);
+    font-weight:900;
+  }
+  .back:hover{ color: var(--ink-2); text-decoration:underline; }
+
+  .panel{
+    margin-top:12px; padding:16px;
+    border:1px solid var(--border); border-radius:14px;
+    background: rgba(15,23,42,0.02);
+    max-width: 980px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:14px;
+    align-items:end;
+  }
+  .span2{ grid-column: 1 / -1; }
+
+  /* ✅ label（框外）更浅，但清晰 */
+  .label{
+    display:block;
+    margin-bottom:6px;
+    font-size:12px;
+    color: var(--ink-4);
+    font-weight:950;
+    letter-spacing: .2px;
+  }
+
+  /* ✅ 输入控件：框内文字更深 */
+  .ctrl{
+    width:100%;
+    height:40px;
+    border:1px solid var(--line-1);
+    border-radius:12px;
+    background:#fff;
+    padding:0 12px;
+    font-size:14px;
+    color: var(--ink-2);
+    font-weight:850;
+    outline:none;
+  }
+
+  /* ✅ placeholder 更浅 */
+  .ctrl::placeholder{
+    color: var(--ink-5);
+    font-weight:700;
+  }
+
+  /* ✅ select 未选项更“弱”一些（不影响已选项） */
+  select.ctrl option[value=""]{
+    color: var(--ink-3);
+    font-weight:800;
+  }
+
+  /* 更好看的文件选择 */
+  .filebox{
+    display:flex; align-items:center; gap:10px;
+    padding:12px;
+    border:1px solid var(--line-1);
+    border-radius:14px;
+    background:#fff;
+  }
+  .filebtn{
+    display:inline-flex; align-items:center; justify-content:center;
+    height:36px;
+    padding:0 12px;
+    border-radius:12px;
+    border:1px solid rgba(37,99,235,.25);
+    background: rgba(37,99,235,.06);
+    color: rgba(37,99,235,1);
+    font-weight:1000;
+    cursor:pointer;
+    user-select:none;
+    white-space:nowrap;
+  }
+  .filebtn:hover{ background: rgba(37,99,235,.10); border-color: rgba(37,99,235,.35); }
+
+  /* ✅ 文件名：框内次重点 */
+  .filename{
+    color: var(--ink-3);
+    font-size:13px;
+    font-weight:850;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    flex:1;
+  }
+  .file-real{ display:none; }
+
+  .ok{
+    margin-top:12px; padding:10px 12px; border-radius:12px;
+    border:1px solid rgba(21,128,61,.18);
+    background: rgba(22,163,74,.05);
+    color:#15803d; font-weight:1000;
+  }
+  .err{
+    margin-top:12px; padding:10px 12px; border-radius:12px;
+    border:1px solid rgba(176,0,32,.18);
+    background: rgba(176,0,32,.06);
+    color:#b00020; font-weight:1000;
+  }
+
+  @media (max-width: 900px){
+    .grid{ grid-template-columns:1fr; }
+    .head-actions{ margin-left:0; width:100%; justify-content:flex-start; }
+  }
+</style>
+
+<div class="card" style="max-width: 1100px;">
+  <div class="page-head">
+    <div>
+      <h2>上传</h2>
+      <div class="head-desc">请选择公司并上传文件；“类别”仅区分原件/翻译件；“文件类型”用于业务归类。</div>
+    </div>
+    <div class="head-actions">
+      <a class="back" href="/ui/documents">← 返回文档列表</a>
+    </div>
+  </div>
+
+  <div class="panel">
+    <form method="post" action="/ui/upload" enctype="multipart/form-data">
+      <div class="grid">
+        <!-- 第 1 行：文件 -->
+        <div class="span2">
+          <span class="label">文件 *</span>
+          <div class="filebox">
+            <label class="filebtn" for="fileInput">选择文件</label>
+            <span class="filename" id="fileNameText">未选择文件</span>
+            <input class="file-real" id="fileInput" type="file" name="file" required />
+          </div>
+        </div>
+
+        <!-- 第 2 行：公司 + 文件类型 -->
+        <div>
+          <span class="label">公司 *</span>
+          <select class="ctrl" name="company_id" required>
+            {% for c in companies %}
+              <option value="{{ c.id }}" {% if selected_company_id and (c.id|int == selected_company_id|int) %}selected{% endif %}>
+                {{ c.company_name }} (ID={{ c.id }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <span class="label">文件类型</span>
+          <select class="ctrl" name="file_type">
+            <option value="" {% if (default_file_type|default('')) == "" %}selected{% endif %}>请选择</option>
+            <option value="公证与HRB" {% if default_file_type == "公证与HRB" %}selected{% endif %}>公证与HRB</option>
+            <option value="法人ID" {% if default_file_type == "法人ID" %}selected{% endif %}>法人ID</option>
+            <option value="VAT" {% if default_file_type == "VAT" %}selected{% endif %}>VAT</option>
+            <option value="账单" {% if default_file_type == "账单" %}selected{% endif %}>账单</option>
+            <option value="银行" {% if default_file_type == "银行" %}selected{% endif %}>银行</option>
+          </select>
+        </div>
+
+        <!-- 第 3 行：类别 + 标题 -->
+        <div>
+          <span class="label">类别</span>
+          <select class="ctrl" name="category">
+            <option value="原件" {% if default_category == "原件" %}selected{% endif %}>原件</option>
+            <option value="翻译件" {% if default_category == "翻译件" %}selected{% endif %}>翻译件</option>
+          </select>
+        </div>
+
+        <div>
+          <span class="label">标题</span>
+          <input class="ctrl" name="title" value="{{ default_title|default('') }}" placeholder="不填则自动使用文件名" />
+        </div>
+
+        <!-- 第 4 行：去重 + group_key（保持不变） -->
+        <div>
+          <span class="label">去重（dedup）</span>
+          <select class="ctrl" name="dedup">
+            <option value="true" {% if default_dedup|default('true') == "true" %}selected{% endif %}>true</option>
+            <option value="false" {% if default_dedup == "false" %}selected{% endif %}>false</option>
+          </select>
+        </div>
+
+        <div>
+          <span class="label">分组键（可不填）</span>
+          <input class="ctrl" name="group_key" value="{{ default_group_key|default('') }}" placeholder="不填自动生成" />
+        </div>
+
+        <div class="span2" style="margin-top: 4px;">
+          <button class="btn btn-primary" type="submit">上传</button>
+        </div>
+      </div>
+
+      {% if ok %}
+        <div class="ok">✅ 上传成功</div>
+      {% endif %}
+      {% if error %}
+        <div class="err">❌ {{ error }}</div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const input = document.getElementById("fileInput");
+    const text = document.getElementById("fileNameText");
+    if (!input || !text) return;
+
+    input.addEventListener("change", function () {
+      const f = input.files && input.files[0];
+      text.textContent = f ? f.name : "未选择文件";
+    });
+  })();
+</script>
+{% endblock %}

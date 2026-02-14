@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>工单 - 新建</title>
+</head>
+<body>
+  <h1>新建工单</h1>
+
+  <div><a href="/ui/tickets">← 返回列表</a></div>
+
+  <hr/>
+
+  <form method="post" action="/ui/tickets/create">
+    <div>
+      <label>公司</label>
+      <select name="company_id">
+        <option value="">（可不选）</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}" {% if selected_company_id and c.id==selected_company_id %}selected{% endif %}>
+            {{ c.company_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>标题</label>
+      <input name="title" required />
+    </div>
+
+    <div>
+      <label>描述</label>
+      <textarea name="description" rows="6"></textarea>
+    </div>
+
+    <button type="submit">提交</button>
+  </form>
+
+</body>
+</html>

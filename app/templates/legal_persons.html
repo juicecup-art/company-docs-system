@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}法人/自然人 - 斯本贸易{% endblock %}
+{% block crumb %}Legal Persons / List{% endblock %}
+
+{% block content %}
+<style>
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .page-head h2 { margin: 0; }
+  .head-desc { color: var(--muted); font-size: 13px; line-height: 1.6; margin-top: 6px; }
+  .head-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .panel {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  /* ✅ 增加一列：公司编号 */
+  .filters-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 14px;
+    align-items: end;
+  }
+  .filters-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .filters-actions .spacer { flex: 1; }
+
+  @media (max-width: 900px) {
+    .head-actions { margin-left: 0; justify-content: flex-start; width: 100%; }
+    .filters-grid { grid-template-columns: 1fr; }
+  }
+
+  table th, table td { padding: 12px 12px; }
+  table { overflow: visible; }
+
+  .pill.del {
+    border-color: rgba(176,0,32,0.25);
+    color: #b00020;
+  }
+
+  td.ops { width: 140px; }
+  .action-menu { position: relative; display: inline-block; }
+  .action-menu summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.10);
+    background: rgba(255,255,255,0.75);
+    font-weight: 800;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .action-menu summary::marker,
+  .action-menu summary::-webkit-details-marker { display: none; }
+  .action-menu summary:hover {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+  }
+  .action-menu[open] { z-index: 90; }
+
+  .action-menu .menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+    min-width: 170px;
+    z-index: 100;
+    padding: 6px;
+  }
+  .action-menu .menu a,
+  .action-menu .menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    text-decoration: none;
+    border-radius: 10px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .action-menu .menu a:hover,
+  .action-menu .menu button:hover {
+    background: rgba(37, 99, 235, 0.06);
+  }
+  .action-menu .menu .danger { color: #b91c1c; }
+  .action-menu .menu .ok { color: #15803d; }
+  .action-menu form { margin: 0; }
+
+  .name-strong { font-weight: 900; color: var(--text); }
+</style>
+
+<div class="card">
+  <div class="page-head">
+    <div>
+      <h2>法人/自然人</h2>
+      <div class="head-desc">搜索：姓名 / 身份证号 / 护照号；状态：正常 / 已删除 / 全部。</div>
+    </div>
+
+    <div class="head-actions">
+      <a class="btn" href="/ui/legal-persons/new" style="text-decoration:none;">+ 新建</a>
+    </div>
+  </div>
+
+  <div class="panel">
+    <form method="get" action="/ui/legal-persons">
+      <div class="filters-grid">
+        <div>
+          <label>关键词</label>
+          <input name="q" value="{{ q.q }}" placeholder="例如 张三 / RO123 / P12345" />
+        </div>
+
+        <!-- ✅ 公司编号（原来你写“公司id”的位置，改为公司编号） -->
+        <div>
+          <label>公司编号</label>
+          <input
+            name="company_code"
+            value="{{ q.company_code }}"
+            placeholder="例如 HU-01"
+          />
+        </div>
+
+        <div>
+          <label>状态（status）</label>
+          <select name="status">
+            <option value="active" {% if q.status=="active" %}selected{% endif %}>正常</option>
+            <option value="deleted" {% if q.status=="deleted" %}selected{% endif %}>已删除</option>
+            <option value="all" {% if q.status=="all" %}selected{% endif %}>全部</option>
+          </select>
+        </div>
+
+        <div>
+          <label>数量（limit）</label>
+          <input name="limit" value="{{ q.limit }}" />
+        </div>
+
+        <div class="filters-actions">
+          <button class="btn" type="submit">查询</button>
+          <a class="back muted" href="/ui/legal-persons">重置</a>
+          <span class="spacer"></span>
+          <span class="muted">结果：<b>{{ rows|length }}</b></span>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div style="margin-top: 14px;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:70px;">ID</th>
+          <th>姓名</th>
+          <th style="width:120px;">国籍</th>
+          <th style="width:120px;">出生日期</th>
+          <th style="width:160px;">身份证号</th>
+          <th style="width:160px;">护照号</th>
+          <th style="width:160px;">更新时间</th>
+          <th style="width:90px;">状态</th>
+          <th style="width:140px;">操作</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td><span class="name-strong">{{ r.full_name }}</span></td>
+          <td class="muted">{{ r.nationality }}</td>
+          <td class="muted">{{ r.birthday }}</td>
+          <td class="muted">{{ r.id_number }}</td>
+          <td class="muted">{{ r.passport_number }}</td>
+          <td class="muted">{{ r.updated_at }}</td>
+
+          <td>
+            {% if r.deleted_at %}
+              <span class="pill del">已删除</span>
+            {% else %}
+              <span class="pill">正常</span>
+            {% endif %}
+          </td>
+
+          <td class="ops">
+            <details class="action-menu">
+              <summary>操作 ▾</summary>
+              <div class="menu">
+                <a href="/ui/legal-persons/{{ r.id }}/edit">编辑</a>
+
+                {% if r.deleted_at %}
+                  <form method="post"
+                        action="/ui/legal-persons/{{ r.id }}/restore"
+                        onsubmit="return confirm('确定恢复 id={{ r.id }} ?');">
+                    <button type="submit" class="ok">恢复</button>
+                  </form>
+                {% else %}
+                  <form method="post"
+                        action="/ui/legal-persons/{{ r.id }}/delete"
+                        onsubmit="return confirm('确定删除 id={{ r.id }} ?');">
+                    <button type="submit" class="danger">删除</button>
+                  </form>
+                {% endif %}
+              </div>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if rows|length == 0 %}
+      <p class="muted" style="margin-top:12px;">暂无记录。</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

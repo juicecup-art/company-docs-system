@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block title %}Admin / Company Permissions{% endblock %}
+{% block crumb %}Admin / Users / Company Permissions{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div
+    style="
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 14px;
+    "
+  >
+    <div>
+      <h2 style="margin: 0">公司权限管理</h2>
+      <div style="color: var(--muted); font-size: 13px; margin-top: 6px">
+        用户：{{ user.username }} {% if user.display_name %}（{{ user.display_name }}）{% endif %} · ID={{ user.id }}
+      </div>
+      <div style="color: var(--muted); font-size: 13px; margin-top: 4px">
+        国家：<b>{% if country %}{{ country }}{% else %}全部{% endif %}</b>｜
+        总 {{ stats.total }}｜ View {{ stats.view_cnt }}｜ Edit {{ stats.edit_cnt }} ｜ Docs {{ stats.docs_cnt }}
+      </div>
+    </div>
+
+    <div>
+      <a class="btn" href="/ui/admin/users" style="text-decoration: none">返回用户列表</a>
+    </div>
+  </div>
+
+  <!-- 国家筛选 -->
+  <div class="card" style="padding: 12px; margin-bottom: 12px">
+    <form
+      method="get"
+      action="/ui/admin/users/{{ user.id }}/company-permissions"
+      id="filterForm"
+      style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center"
+    >
+      <select
+        name="country"
+        id="countrySelect"
+        style="
+          padding: 10px 12px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          min-width: 200px;
+        "
+      >
+        <option value="" {% if not country %}selected{% endif %}>全部国家</option>
+        {% for c in countries %}
+        <option value="{{ c }}" {% if c == country %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+
+      <button class="btn btn-sm" type="submit">应用</button>
+
+      <input
+        name="q"
+        id="qInput"
+        value="{{ q }}"
+        placeholder="搜索公司名 / 注册号 / VAT / CUI"
+        style="
+          flex: 1;
+          min-width: 260px;
+          padding: 10px 12px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+        "
+      />
+
+      <button class="btn btn-sm" type="submit">筛选</button>
+
+      <a
+        class="btn btn-sm"
+        href="/ui/admin/users/{{ user.id }}/company-permissions"
+        style="text-decoration: none"
+        >重置</a
+      >
+    </form>
+  </div>
+
+  <!-- 批量操作 -->
+  <div class="card" style="padding: 12px; margin-bottom: 12px">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap">
+      <button class="btn btn-sm" type="button" onclick="bulkApply('set_view')">
+        当前结果：全给查看
+      </button>
+      <button class="btn btn-sm btn-primary" type="button" onclick="bulkApply('set_edit')">
+        当前结果：全给编辑
+      </button>
+      <button class="btn btn-sm" type="button" onclick="bulkApply('set_docs')">
+        当前结果：全给文档
+      </button>
+      <button class="btn btn-sm" type="button" onclick="bulkApply('clear_edit_only')">
+        仅清空编辑
+      </button>
+      <button class="btn btn-sm" type="button" onclick="bulkApply('clear_docs_only')">
+        仅清空文档
+      </button>
+      <button class="btn btn-sm danger" type="button" onclick="bulkApply('clear')">
+        清空权限
+      </button>
+      <span id="bulkStatus" style="font-size: 13px; color: var(--muted); align-self: center"></span>
+    </div>
+  </div>
+
+  <!-- 列表 -->
+  <div class="card" style="padding: 0">
+    <table class="table" style="width: 100%">
+      <thead>
+        <tr>
+          <th style="width: 60px">ID</th>
+          <th>公司</th>
+          <th style="width: 140px">查看</th>
+          <th style="width: 140px">编辑</th>
+          <th style="width: 140px">文档</th>
+          <th style="width: 160px">状态</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr data-company-id="{{ r.id }}">
+          <td>{{ r.id }}</td>
+
+          <td>
+            <div style="font-weight: 600">{{ r.company_name }}</div>
+            <div style="font-size: 12px; color: var(--muted)">
+              {{ r.country }}
+            </div>
+          </td>
+
+          <td>
+            <label style="display: flex; gap: 6px; align-items: center">
+              <input
+                type="checkbox"
+                class="perm-view"
+                {% if r.can_view %}checked{% endif %}
+                onchange="onToggle(this)"
+              />
+              <span>查看</span>
+            </label>
+          </td>
+
+          <td>
+            <label style="display: flex; gap: 6px; align-items: center">
+              <input
+                type="checkbox"
+                class="perm-edit"
+                {% if r.can_edit %}checked{% endif %}
+                onchange="onToggle(this)"
+              />
+              <span>编辑</span>
+            </label>
+          </td>
+
+          <td>
+            <label style="display: flex; gap: 6px; align-items: center">
+              <input
+                type="checkbox"
+                class="perm-docs"
+                {% if r.can_docs %}checked{% endif %}
+                onchange="onToggle(this)"
+              />
+              <span>文档</span>
+            </label>
+          </td>
+          
+
+          <td>
+            <span class="row-status" style="font-size: 13px; color: var(--muted)"></span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if rows|length == 0 %}
+    <div style="padding: 14px; color: var(--muted)">没有匹配的公司</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ✅ 用 tojson 防止引号/特殊字符把 JSON 弄坏 -->
+<script id="page-data" type="application/json">
+{{ {"user_id": user.id, "country": (country or ""), "q": (q or "")} | tojson }}
+</script>
+
+<script>
+  const pageData = JSON.parse(document.getElementById('page-data').textContent)
+  const USER_ID = pageData.user_id
+
+  function setRowStatus(tr, text, isError = false) {
+    const el = tr.querySelector('.row-status')
+    el.textContent = text || ''
+    el.style.color = isError ? 'var(--danger)' : 'var(--muted)'
+  }
+
+  async function onToggle(el) {
+    const tr = el.closest('tr')
+    const companyId = tr.dataset.companyId
+
+    const viewCb = tr.querySelector('.perm-view')
+    const editCb = tr.querySelector('.perm-edit')
+    const docsCb = tr.querySelector('.perm-docs')
+
+    // 前端联动：edit/docs => view；取消 view => 取消 edit/docs
+    if (editCb.checked && !viewCb.checked) viewCb.checked = true
+    if (docsCb.checked && !viewCb.checked) viewCb.checked = true
+
+    if (!viewCb.checked) {
+      if (editCb.checked) editCb.checked = false
+      if (docsCb.checked) docsCb.checked = false
+    }
+
+    const prev = {
+      v: viewCb.checked,
+      e: editCb.checked,
+      d: docsCb.checked,
+    }
+
+    setRowStatus(tr, '保存中…')
+
+    try {
+      const resp = await fetch(
+        `/ui/admin/users/${USER_ID}/company-permissions/company/${companyId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            can_view: viewCb.checked ? 1 : 0,
+            can_edit: editCb.checked ? 1 : 0,
+            can_docs: docsCb.checked ? 1 : 0,
+          }),
+        }
+      )
+
+      const data = await resp.json()
+      if (!resp.ok || !data.ok) throw new Error(data.error || '保存失败')
+
+      viewCb.checked = data.can_view === 1
+      editCb.checked = data.can_edit === 1
+      docsCb.checked = data.can_docs === 1
+
+      setRowStatus(tr, '已保存')
+      setTimeout(() => setRowStatus(tr, ''), 1200)
+    } catch (e) {
+      viewCb.checked = prev.v
+      editCb.checked = prev.e
+      docsCb.checked = prev.d
+      setRowStatus(tr, e.message || '保存失败', true)
+    }
+  }
+
+  async function bulkApply(mode) {
+    const statusEl = document.getElementById('bulkStatus')
+    statusEl.textContent = '批量处理中…'
+    statusEl.style.color = 'var(--muted)'
+
+    // ✅ 点击时实时读取筛选条件（不再依赖 pageData 旧值）
+    const country = (document.getElementById('countrySelect')?.value ?? '').toString()
+    const q = (document.getElementById('qInput')?.value ?? '').toString()
+
+    // ✅ 用 FormData：确保 FastAPI Form(...) 100% 能解析
+    const fd = new FormData()
+    fd.append('country', country)   // 必须有 key，即使空字符串也要发
+    fd.append('q', q)
+    fd.append('mode', mode)
+
+    try {
+      const resp = await fetch(
+        `/ui/admin/users/${USER_ID}/company-permissions/bulk`,
+        {
+          method: 'POST',
+          body: fd,
+          headers: { 'Accept': 'application/json' },
+        }
+      )
+
+      const data = await resp.json().catch(() => null)
+
+      if (!resp.ok || !data || !data.ok) {
+        // ✅ 直接把 FastAPI 的 detail 打出来，你就能看到究竟缺了哪个字段
+        const msg = data?.error || data?.detail || ('HTTP ' + resp.status)
+        throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      }
+
+      statusEl.textContent = `完成：影响 ${data.affected} 条，刷新中…`
+
+      // 刷新保留筛选
+      const url = new URL(window.location.href)
+      url.searchParams.set('country', country)
+      if (q.trim()) url.searchParams.set('q', q.trim())
+      else url.searchParams.delete('q')
+      window.location.href = url.toString()
+
+    } catch (e) {
+      statusEl.textContent = e.message || '批量失败'
+      statusEl.style.color = 'var(--danger)'
+      setTimeout(() => {
+        statusEl.style.color = 'var(--muted)'
+      }, 2000)
+    }
+  }
+</script>
+{% endblock %}

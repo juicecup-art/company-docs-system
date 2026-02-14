@@ -1,0 +1,301 @@
+{# app/templates/admin_users.html #} {% extends "base.html" %} {% block title
+%}管理员 / 用户管理{% endblock %} {% block crumb %}管理员 / 用户管理{% endblock
+%} {% block content %}
+<style>
+  /* 页面头部留白更舒服 */
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .page-head h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+  .page-sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  /* ✅ 关键：不要让包裹层裁剪下拉菜单 */
+  .table-wrap {
+    overflow: visible !important; /* 解决“更多”被遮挡 */
+    position: relative;
+  }
+
+  /* 表格更清爽一点 */
+  table th,
+  table td {
+    padding: 14px 14px;
+  }
+  tbody tr:hover td {
+    background: rgba(37, 99, 235, 0.03);
+  }
+
+  /* 角色/状态的 pill 稍微精致一点 */
+  .pill.role {
+    background: rgba(15, 23, 42, 0.03);
+  }
+  .pill.ok {
+    border-color: rgba(22, 163, 74, 0.25);
+    background: rgba(22, 163, 74, 0.06);
+    color: #15803d;
+    font-weight: 900;
+  }
+  .pill.off {
+    border-color: rgba(220, 38, 38, 0.22);
+    background: rgba(220, 38, 38, 0.05);
+    color: #b91c1c;
+    font-weight: 900;
+  }
+
+  /* 操作列布局：编辑 + 更多 */
+  td.actions {
+    text-align: right;
+    white-space: nowrap;
+    position: relative; /* 给下拉定位参考 */
+  }
+  .row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  .btn-sm {
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  /* 下拉菜单 */
+  details.action-menu {
+    position: relative;
+    display: inline-block;
+  }
+  details.action-menu summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--text);
+  }
+  details.action-menu summary::marker,
+  details.action-menu summary::-webkit-details-marker {
+    display: none;
+  }
+  details.action-menu summary:hover {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.14);
+  }
+
+  /* ✅ 关键：z-index 要足够大；并且不要被父层 overflow 裁剪 */
+  details.action-menu[open] {
+    z-index: 9999;
+  }
+
+  .action-menu .menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+    padding: 6px;
+    z-index: 10000;
+  }
+
+  .action-menu .menu a,
+  .action-menu .menu button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 900;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+  }
+  .action-menu .menu a:hover,
+  .action-menu .menu button:hover {
+    background: rgba(37, 99, 235, 0.06);
+  }
+
+  .action-menu .menu .danger {
+    color: #dc2626;
+  }
+  .action-menu .menu .danger:hover {
+    background: rgba(220, 38, 38, 0.08);
+  }
+  /* ===== 强制修复：蓝色按钮无文字 ===== */
+  td.actions .btn {
+    min-width: auto !important;
+    width: auto !important;
+    height: auto !important;
+
+    padding: 8px 14px !important;
+
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    font-weight: 800 !important;
+
+    color: #ffffff !important; /* ✅ 强制白字 */
+    background: var(--primary) !important;
+
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+
+  /* 如果你用的是 btn-sm */
+  td.actions .btn-sm {
+    font-size: 13px !important;
+    padding: 8px 14px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* 防止某些 reset 把按钮字体清零 */
+  td.actions button {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+  }
+</style>
+
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2>用户管理</h2>
+      <div class="page-sub">共 {{ users|length }} 条</div>
+    </div>
+    <a
+      class="btn"
+      href="/ui/admin/users/new"
+      style="text-decoration: none; white-space: nowrap"
+    >
+      新增用户
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 70px">ID</th>
+            <th style="width: 180px">用户名</th>
+            <th style="width: 200px">显示名</th>
+            <th>邮箱</th>
+            <th style="width: 160px">部门</th>
+            <th style="width: 120px">角色</th>
+            <th style="width: 120px">状态</th>
+            <th style="width: 220px; text-align: right">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td><b>{{ u.username }}</b></td>
+            <td>{{ u.display_name or '' }}</td>
+            <td class="muted">{{ u.email or '' }}</td>
+            <td>{{ u.department or '' }}</td>
+
+            <td>
+              <span class="pill role"
+                >{{ '管理员' if u.role=='admin' else '普通用户' }}</span
+              >
+            </td>
+
+            <td>
+              {% if (u.status|string) == '1' %}
+              <span class="pill ok">启用</span>
+              {% else %}
+              <span class="pill off">停用</span>
+              {% endif %}
+            </td>
+
+            <td class="actions">
+              <div class="row-actions">
+                <a
+                  class="btn btn-sm btn-sm"
+                  href="/ui/admin/users/{{ u.id }}/edit"
+                  style="text-decoration: none"
+                >
+                  编辑
+                </a>
+
+                <details class="action-menu">
+                  <summary>更多 <span style="font-size: 11px">▼</span></summary>
+                  <div class="menu">
+                    <a href="/ui/admin/users/{{ u.id }}/password">🔑 改密码</a>
+                    <a href="/ui/admin/users/{{ u.id }}/company-permissions"
+                      >🐱‍💻公司权限</a
+                    >
+                    <!-- <a href="/ui/admin/users/{{ u.id }}/companies"
+                      >🏢 公司权限</a
+                    > -->
+
+                    <form
+                      method="post"
+                      action="/ui/admin/users/{{ u.id }}/delete"
+                      style="margin: 0"
+                      onsubmit="return confirm('确定删除该用户？');"
+                    >
+                      <button class="danger" type="submit">🗑 删除用户</button>
+                    </form>
+                  </div>
+                </details>
+              </div>
+            </td>
+          </tr>
+          {% endfor %} {% if users|length == 0 %}
+          <tr>
+            <td colspan="8" class="muted">暂无用户</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 点击空白处关闭所有“更多”菜单
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.action-menu[open]').forEach((d) => {
+      if (!d.contains(e.target)) d.removeAttribute('open')
+    })
+  })
+
+  // 只允许同时打开一个
+  document.querySelectorAll('details.action-menu').forEach((d) => {
+    d.addEventListener('toggle', function () {
+      if (d.open) {
+        document
+          .querySelectorAll('details.action-menu[open]')
+          .forEach((other) => {
+            if (other !== d) other.removeAttribute('open')
+          })
+      }
+    })
+  })
+</script>
+{% endblock %}

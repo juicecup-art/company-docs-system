@@ -1,0 +1,257 @@
+{% extends "base.html" %} {% block title %}公司地址 - 斯本贸易{% endblock %} {%
+block crumb %}Companies / Addresses{% endblock %} {% block content %}
+
+<style>
+  /* ===== 本页专用：让页面不紧凑、排版更舒适 ===== */
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .page-head h2 {
+    margin: 0;
+  }
+  .page-sub {
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+  .section {
+    margin-top: 14px;
+  }
+
+  .panel {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  /* 表单：宽屏 3 列，中屏 2 列，小屏 1 列 */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 14px;
+    align-items: end;
+  }
+  .span-2 {
+    grid-column: span 2;
+  }
+  .span-3 {
+    grid-column: 1 / -1;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  /* 更克制的小按钮（不影响 form 功能） */
+  .mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+    transition: background 120ms ease, border-color 120ms ease,
+      transform 120ms ease;
+  }
+  .mini-btn:hover {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+  }
+  .mini-btn.danger {
+    color: #b91c1c;
+    border-color: rgba(185, 28, 28, 0.2);
+    background: rgba(220, 38, 38, 0.04);
+  }
+  .mini-btn.danger:hover {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(185, 28, 28, 0.28);
+  }
+  .mini-btn.primary {
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.22);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  .mini-btn.primary:hover {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+
+  /* table 行距稍微舒展一点 */
+  table th,
+  table td {
+    padding: 12px 12px;
+  }
+
+  /* actions 列不抢眼、对齐更舒服 */
+  td.actions {
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  /* 自适应 */
+  @media (max-width: 1100px) {
+    .form-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .span-2 {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 720px) {
+    .page-head {
+      flex-direction: column;
+      gap: 8px;
+    }
+    td.actions {
+      text-align: left;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    .form-actions {
+      justify-content: flex-start;
+    }
+  }
+</style>
+
+<div class="card">
+  <!-- Header（更松的层级） -->
+  <div class="page-head">
+    <div>
+      <h2>公司地址</h2>
+      <div class="muted page-sub">
+        公司：<b>{{ company.company_name }}</b>
+        <span class="muted">（ID：{{ company.id }}）</span>
+      </div>
+    </div>
+    <span style="flex: 1"></span>
+    <a class="back" href="/ui/companies">← 返回公司编辑 </a>
+  </div>
+
+  <p class="hint2" style="margin: 0">
+    company_addresses：可新增/编辑，支持设为 current。
+  </p>
+
+  <!-- Form Panel（更不紧凑） -->
+  <div class="panel section">
+    <form method="post" action="/ui/companies/{{ company.id }}/addresses/save">
+      <input type="hidden" name="address_id" value="" />
+
+      <div class="form-grid">
+        <div class="span-2">
+          <label>地址（address） *</label>
+          <input name="address" placeholder="详细地址" required />
+        </div>
+
+        <div>
+          <label>邮编（postal_code）</label>
+          <input name="postal_code" placeholder="邮编" />
+        </div>
+
+        <div>
+          <label>地址类型（address_type）</label>
+          <input name="address_type" placeholder="registered / current" />
+        </div>
+
+        <div>
+          <label>是否当前（is_current）</label>
+          <select name="is_current">
+            <option value="0" selected>0</option>
+            <option value="1">1</option>
+          </select>
+        </div>
+
+        <div class="span-3">
+          <label>备注（note）</label>
+          <input name="note" placeholder="备注（可选）" />
+        </div>
+
+        <div class="span-3 form-actions">
+          <button class="btn" type="submit">新增地址</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="muted section">结果：<b>{{ rows|length }}</b></div>
+
+  <table class="section">
+    <thead>
+      <tr>
+        <th style="width: 70px">ID</th>
+        <th>地址</th>
+        <th style="width: 120px">邮编</th>
+        <th style="width: 140px">类型</th>
+        <th style="width: 90px">当前</th>
+        <th>备注</th>
+        <th style="width: 170px">创建时间</th>
+        <th style="width: 180px; text-align: right">操作</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="muted">{{ r.id }}</td>
+        <td><b>{{ r.address }}</b></td>
+        <td class="muted">{{ r.postal_code }}</td>
+        <td class="muted">{{ r.address_type }}</td>
+        <td>
+          {% if r.is_current == 1 %}
+          <span class="pill">CURRENT</span>
+          {% else %}
+          <span class="muted">{{ r.is_current }}</span>
+          {% endif %}
+        </td>
+        <td class="muted">{{ r.note }}</td>
+        <td class="muted">{{ r.created_at }}</td>
+
+        <td class="actions">
+          {% if r.is_current == 0 %}
+          <form
+            method="post"
+            action="/ui/companies/{{ company.id }}/addresses/{{ r.id }}/set-current"
+            style="display: inline; margin: 0"
+            onsubmit="return confirm('设为 current 地址?');"
+          >
+            <button type="submit" class="mini-btn primary">设为当前</button>
+          </form>
+          {% else %}
+          <span class="pill">当前</span>
+          {% endif %}
+
+          <form
+            method="post"
+            action="/ui/companies/{{ company.id }}/addresses/{{ r.id }}/delete"
+            style="display: inline; margin: 0; margin-left: 8px"
+            onsubmit="return confirm('确定删除地址 id={{ r.id }} ?');"
+          >
+            <button type="submit" class="mini-btn danger">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if rows|length == 0 %}
+  <p class="muted section">暂无地址记录。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

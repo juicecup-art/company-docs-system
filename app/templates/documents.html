@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+{% block title %}文档列表 - 斯本贸易{% endblock %}
+{% block crumb %}Documents / List{% endblock %}
+
+{% block content %}
+<style>
+  .page { display:flex; flex-direction:column; gap:14px; }
+
+  .head{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .head h2{ margin:0; font-size:22px; font-weight:1000; }
+  .head-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .kpi{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:13px; color:var(--muted);
+    padding:8px 10px;
+    border:1px solid rgba(15,23,42,.08);
+    border-radius:12px;
+    background: rgba(255,255,255,.75);
+  }
+  .kpi b{ color:var(--text); font-weight:1000; }
+
+  .btn-outline{
+    background:#fff !important;
+    border:1px solid rgba(37,99,235,.25) !important;
+    color: rgba(37,99,235,1) !important;
+  }
+  .btn-outline:hover{ background: rgba(37,99,235,.06) !important; }
+
+  .filters{
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15,23,42,0.02);
+  }
+
+  /* ✅ 一行排满：flex，不会出现中间空一块 */
+  .filters-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:nowrap;
+  }
+
+  .mini-input,.mini-select{
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid rgba(15,23,42,.10);
+    border-radius: 14px;
+    background: #fff;
+    font-size: 13px;
+    outline: none;
+  }
+
+  .filters-actions{
+    display:flex; gap:10px; align-items:center; justify-content:flex-end;
+    white-space:nowrap;
+  }
+
+  .table-card{
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background:#fff;
+    overflow: visible;              /* ✅ 菜单不被裁切 */
+    position: relative;
+  }
+  .table-wrap{
+    border-radius: 14px;
+    overflow: visible;
+    background:#fff;
+  }
+
+  td.ops{ width:120px; position:relative; }
+  .action-menu[open]{ z-index:999; }
+  .action-menu .menu{ z-index:1000; }
+
+
+  table{ width:100%; border-collapse:collapse; }
+  th,td{ padding: 12px 12px; border-bottom:1px solid rgba(15,23,42,.06); vertical-align:top; }
+  th{ background:#fafafa; color:var(--muted); font-size:12px; font-weight:900; text-align:left; }
+
+  .doc-title{
+    text-decoration:none;
+    font-weight:1000;
+    color:var(--text);
+    font-size:16px;
+  }
+  .doc-title:hover{ text-decoration:underline; }
+
+  .line{
+    margin-top:6px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    font-size:13px;
+    line-height:1.4;
+    align-items:center;
+  }
+  .line .k{ color:var(--muted); font-weight:800; }
+  .line .v{ color:rgba(15,23,42,.82); font-weight:900; }
+
+  /* ✅ 不展示原文件名：这里改为“分类信息”展示位 */
+  .line2{
+    margin-top:6px;
+    color:rgba(15,23,42,.55);
+    font-size:12px;
+    line-height:1.4;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width: 560px;
+  }
+
+    /* ✅ 每个控件宽度固定，避免某个被挤成“空的小框” */
+    .w-cid{ width: 140px; }
+  .w-company{ width: 200px; }
+  .w-title{ width: 220px; }
+  .w-ft{ width: 180px; }
+  .w-cat{ width: 180px; }
+  .w-all{ width: 220px; }
+  .w-status{ width: 160px; }
+
+  .pill{
+    display:inline-flex; align-items:center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(15,23,42,.10);
+    background: rgba(15,23,42,.02);
+    color: rgba(15,23,42,.72);
+    font-size: 12px;
+    font-weight: 900;
+    white-space:nowrap;
+  }
+  .pill.del{
+    border-color: rgba(176,0,32,.25);
+    background: rgba(176,0,32,.06);
+    color: #b00020;
+  }
+
+  td.ops{ width: 120px; }
+  .action-menu{ position:relative; display:inline-block; }
+  .action-menu summary{
+    list-style:none;
+    cursor:pointer;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(15,23,42,.10);
+    background: #fff;
+    font-weight: 900;
+    font-size: 13px;
+    user-select:none;
+    white-space:nowrap;
+  }
+  .action-menu summary::marker,
+  .action-menu summary::-webkit-details-marker{ display:none; }
+  .action-menu summary:hover{
+    background: rgba(37,99,235,.06);
+    border-color: rgba(37,99,235,.18);
+  }
+  .action-menu[open]{ z-index:90; }
+  .action-menu .menu{
+    position:absolute;
+    right:0;
+    top: calc(100% + 8px);
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15,23,42,.14);
+    min-width:160px;
+    z-index:100;
+    padding:6px;
+  }
+  .action-menu.dropup .menu{ top:auto; bottom: calc(100% + 8px); }
+
+  .action-menu .menu a,
+  .action-menu .menu button{
+    display:flex;
+    width:100%;
+    text-align:left;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--text);
+    text-decoration:none;
+    border-radius: 10px;
+    border:0;
+    background: transparent;
+    cursor:pointer;
+  }
+  .action-menu .menu a:hover,
+  .action-menu .menu button:hover{ background: rgba(37,99,235,.06); }
+  .action-menu .menu .danger{ color:#b91c1c; }
+  .action-menu .menu .ok{ color:#15803d; }
+  .action-menu .menu .hard{ color:#b00020; background: rgba(176,0,32,.06); border: 1px solid rgba(176,0,32,.20); }
+  .action-menu .menu .hard:hover{ background: rgba(176,0,32,.10); }
+  .action-menu form{ margin:0; }
+/* 让筛选区浮到 topbar 上面 */
+.filters{ position: relative; z-index: 50; overflow: visible; }
+.filters-row{ position: relative; z-index: 51; overflow: visible; }
+
+/* 修复 select 文案被箭头挤掉 */
+.mini-select{
+  padding-right: 34px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.w-ft{ width: 210px; }
+.w-cat{ width: 210px; }
+
+  .pager{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;
+    padding: 12px 12px;
+    border-top: 1px solid rgba(15,23,42,.06);
+    background:#fff;
+    border-radius: 0 0 14px 14px;
+  }
+  .pager .meta{ color: var(--muted); font-size: 13px; }
+  .pager .meta b{ color: var(--text); font-weight:1000; }
+  .pager .nav{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .pager .limit{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+  @media (max-width: 980px){
+    .filters-row{
+      grid-template-columns: 1fr 1fr;
+    }
+    .filters-actions{ justify-content:flex-start; }
+    .line2{ max-width: 320px; }
+  }
+</style>
+
+<div class="page">
+  <div class="head">
+    <div><h2>文档列表</h2></div>
+
+    <div class="head-right">
+      <span class="kpi">总数 <b>{{ total|default(0) }}</b></span>
+      <a class="btn btn-outline" href="/ui/documents/recycle" style="text-decoration:none;">回收站</a>
+      <a class="btn btn-outline" href="/ui/upload" style="text-decoration:none;">去上传</a>
+    </div>
+  </div>
+
+  <div class="filters">
+    <form method="get" action="/ui/documents">
+      <div class="filters-row">
+
+        <input class="mini-input" name="company_id" value="{{ q.company_id|default('') }}" placeholder="公司编号" />
+        <input class="mini-input" name="company" value="{{ q.company|default('') }}" placeholder="公司名" />
+        <input class="mini-input" name="title" value="{{ q.title|default('') }}" placeholder="文件名" />
+
+        {# ✅ 下拉修正：不要“文件类别（全部）”这种重复显示，统一“全部” #}
+        <select class="mini-select" name="file_type">
+          <option value="" {% if (q.file_type|default('')) == "" %}selected{% endif %}>文件类别：全部</option>
+          {% for t in file_type_options|default([]) %}
+            <option value="{{ t }}" {% if (q.file_type|default('')) == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+
+        <select class="mini-select" name="category">
+          <option value="" {% if (q.category|default('')) == "" %}selected{% endif %}>分类：全部</option>
+          {% for c in category_options|default([]) %}
+            <option value="{{ c }}" {% if (q.category|default('')) == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+
+        <input class="mini-input" name="q" value="{{ q.q|default('') }}" placeholder="全部（任意字段）" />
+
+        <div class="filters-actions">
+          <select class="mini-select" name="is_deleted" style="width:140px;">
+            <option value="" {% if (q.is_deleted|default('')) == "" %}selected{% endif %}>状态：全部</option>
+            <option value="0" {% if (q.is_deleted|default('')) == "0" %}selected{% endif %}>正常</option>
+            <option value="1" {% if (q.is_deleted|default('')) == "1" %}selected{% endif %}>已删除</option>
+          </select>
+
+          <button class="btn btn-primary btn-sm" type="submit">筛选</button>
+          <a class="btn btn-sm" href="/ui/documents" style="text-decoration:none;">重置</a>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>文档</th>
+            <th style="width:140px;">文件类别</th>
+            <th style="width:170px;">上传时间</th>
+            <th style="width:110px;">状态</th>
+            <th class="ops">操作</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>
+              <a class="doc-title" href="/ui/documents/{{ r.id }}">{{ r.title }}</a>
+
+              <div class="line">
+                <span class="k">公司：</span>
+                <span class="v">{{ r.company_name }}</span>
+              </div>
+
+              {# ✅ 原文件名不显示；这里放分类信息 #}
+              <div class="line2" title="{{ r.category or '-' }}">
+                分类：{{ r.category or '-' }}
+              </div>
+            </td>
+
+            <td>
+              {% if r.file_type %}
+                <span class="pill">{{ r.file_type }}</span>
+              {% else %}
+                <span class="muted">-</span>
+              {% endif %}
+            </td>
+
+            <td class="muted">{{ r.created_at }}</td>
+
+            <td>
+              {% if r.is_deleted == 0 %}
+                <span class="pill">正常</span>
+              {% else %}
+                <span class="pill del">已删除</span>
+              {% endif %}
+            </td>
+
+            <td class="ops">
+              <details class="action-menu">
+                <summary>操作 ▾</summary>
+                <div class="menu">
+                  <a href="/ui/documents/{{ r.id }}">详情</a>
+                  <a href="/ui/documents/{{ r.id }}/download">下载</a>
+
+                  {% if r.is_deleted == 0 %}
+                    <form method="post"
+                          action="/ui/documents/{{ r.id }}/delete"
+                          onsubmit="return confirm('确定删除文档 id={{ r.id }} ?');">
+                      <button type="submit" class="danger">删除</button>
+                    </form>
+                  {% else %}
+                    <form method="post"
+                          action="/ui/documents/{{ r.id }}/restore"
+                          onsubmit="return confirm('确定恢复文档 id={{ r.id }} ?');">
+                      <button type="submit" class="ok">恢复</button>
+                    </form>
+
+                    {% if current_user and current_user.role == "admin" %}
+                    <form method="post"
+                          action="/ui/documents/{{ r.id }}/hard-delete"
+                          onsubmit="return confirm('⚠️ 硬删除不可恢复，将删除数据库记录并删除磁盘文件。确定继续？');">
+                      <button type="submit" class="hard">硬删除</button>
+                    </form>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </details>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if rows|length == 0 %}
+        <div style="padding:14px;color:var(--muted);">没有结果</div>
+      {% endif %}
+    </div>
+
+    {% set total_pages = total_pages|default(1) %}
+    {% set page = page|default(1) %}
+    {% set limit = limit|default(20) %}
+
+    <div class="pager">
+      <div class="meta">
+        共 <b>{{ total|default(0) }}</b> 条 · 第 <b>{{ page }}</b> / <b>{{ total_pages }}</b> 页
+      </div>
+
+      <div class="nav">
+        {% if page > 1 %}
+          <a class="btn btn-sm"
+             href="/ui/documents?company_id={{ q.company_id|urlencode }}&company={{ q.company|urlencode }}&title={{ q.title|urlencode }}&file_type={{ q.file_type|urlencode }}&category={{ q.category|urlencode }}&q={{ q.q|urlencode }}&is_deleted={{ q.is_deleted|urlencode }}&page={{ page - 1 }}&limit={{ limit }}"
+             style="text-decoration:none;">上一页</a>
+        {% endif %}
+        {% if page < total_pages %}
+          <a class="btn btn-sm"
+             href="/ui/documents?company_id={{ q.company_id|urlencode }}&company={{ q.company|urlencode }}&title={{ q.title|urlencode }}&file_type={{ q.file_type|urlencode }}&category={{ q.category|urlencode }}&q={{ q.q|urlencode }}&is_deleted={{ q.is_deleted|urlencode }}&page={{ page + 1 }}&limit={{ limit }}"
+             style="text-decoration:none;">下一页</a>
+        {% endif %}
+      </div>
+
+      <form class="limit" method="get" action="/ui/documents">
+        <input type="hidden" name="company_id" value="{{ q.company_id|default('') }}" />
+        <input type="hidden" name="company" value="{{ q.company|default('') }}" />
+        <input type="hidden" name="title" value="{{ q.title|default('') }}" />
+        <input type="hidden" name="file_type" value="{{ q.file_type|default('') }}" />
+        <input type="hidden" name="category" value="{{ q.category|default('') }}" />
+        <input type="hidden" name="q" value="{{ q.q|default('') }}" />
+        <input type="hidden" name="is_deleted" value="{{ q.is_deleted|default('') }}" />
+        <input type="hidden" name="page" value="1" />
+
+        <span class="muted" style="font-size:13px;">每页</span>
+        <input class="mini-input" style="width:86px;" name="limit" value="{{ limit }}" />
+        <button class="btn btn-primary btn-sm" type="submit">应用</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ✅ 点击空白区域关闭所有菜单
+  (function () {
+    function closeAll(except) {
+      document.querySelectorAll("details.action-menu[open]").forEach(d => {
+        if (d !== except) d.removeAttribute("open");
+      });
+    }
+
+    document.addEventListener("click", function (e) {
+      const inMenu = e.target.closest("details.action-menu");
+      if (!inMenu) return closeAll(null);
+      closeAll(inMenu);
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeAll(null);
+    });
+  })();
+
+  // ✅ 最后一行菜单不够空间则向上弹
+  (function () {
+    document.querySelectorAll("details.action-menu").forEach(function (d) {
+      d.addEventListener("toggle", function () {
+        if (!d.open) return;
+        d.classList.remove("dropup");
+        const menu = d.querySelector(".menu");
+        if (!menu) return;
+        const rect = menu.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 12) d.classList.add("dropup");
+      });
+    });
+  })();
+</script>
+
+
+
+{% endblock %}

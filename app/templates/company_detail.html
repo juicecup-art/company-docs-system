@@ -1,0 +1,543 @@
+{% extends "base.html" %} {% block title %}公司详情 - 斯本贸易{% endblock %} {%
+block crumb %}Companies / Detail{% endblock %} {% block content %}
+
+<style>
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 1100px;
+  }
+  .head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .head h2 {
+    margin: 0;
+  }
+  .head-meta {
+    margin-top: 6px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .head-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .btn.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    box-shadow: none;
+    font-weight: 800;
+  }
+  .btn.secondary:hover {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.14);
+  }
+
+  .action-menu {
+    position: relative;
+    display: inline-block;
+  }
+  .action-menu summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-weight: 800;
+    user-select: none;
+  }
+  .action-menu summary::marker,
+  .action-menu summary::-webkit-details-marker {
+    display: none;
+  }
+  .action-menu summary:hover {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.14);
+  }
+  .action-menu[open] {
+    z-index: 80;
+  }
+  .action-menu .menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+    min-width: 170px;
+    z-index: 90;
+    padding: 6px;
+  }
+  .action-menu .menu a {
+    display: block;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    border-radius: 10px;
+  }
+  .action-menu .menu a:hover {
+    background: rgba(37, 99, 235, 0.06);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* ✅ 3列 */
+    gap: 14px;
+  }
+
+  .span3 {
+    grid-column: 1 / -1;
+  }
+  .span2 {
+    grid-column: span 2;
+  }
+
+  /* 第五行左侧占位用（桌面端留空一格） */
+  .empty {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .kv {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+  .kv .k {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .kv .v {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .kv .v.muted {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .section {
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 10px 0;
+  }
+  .section-head h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+  .section-head .muted {
+    font-size: 13px;
+  }
+
+  table th,
+  table td {
+    padding: 12px 12px;
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .span2,
+    .span3 {
+      grid-column: 1 / -1;
+    }
+    .empty {
+      display: none; /* 手机端不需要占位 */
+    }
+    .head {
+      flex-direction: column;
+    }
+    .head-actions {
+      margin-left: 0;
+      justify-content: flex-start;
+    }
+  }
+</style>
+
+<div class="card">
+  <div class="page">
+    <!-- Header -->
+    <div class="head">
+      <div>
+        <h2>公司详情</h2>
+        <div class="head-meta">
+          <span>公司 ID：<b>{{ company.id }}</b></span>
+        </div>
+      </div>
+
+      <div class="head-actions">
+        <!-- 只有可编辑的人看到“编辑公司” -->
+        {% if can_edit %}
+        <a
+          class="btn"
+          href="/ui/companies/{{ company.id }}/edit"
+          style="text-decoration: none"
+          >编辑公司</a
+        >
+        {% else %}
+        <span
+          class="pill"
+          style="border-color: rgba(220, 38, 38, 0.25); color: #b00020"
+          >只读（无编辑权限）</span
+        >
+        {% endif %}
+
+        <a
+          class="btn secondary"
+          href="/ui/documents?company_id={{ company.id }}"
+          style="text-decoration: none"
+          >查看文档</a
+        >
+
+        <a
+          class="btn secondary"
+          href="/ui/companies"
+          style="text-decoration: none"
+          >返回列表</a
+        >
+
+        <!-- 更多操作：写入口只对 can_edit 展示；只读用户保留“查看类入口” -->
+        <details class="action-menu">
+          <summary>更多操作 ▾</summary>
+          <div class="menu">
+            {% if can_edit %}
+            <a href="/ui/upload?company_id={{ company.id }}">上传文档</a>
+            <a href="/ui/companies/{{ company.id }}/legal-persons">法人绑定</a>
+            <a href="/ui/companies/{{ company.id }}/addresses">地址管理</a>
+            <a href="/ui/companies/{{ company.id }}/platforms">平台管理</a>
+            {% else %}
+            <!-- 只读：给出明确提示，避免点进去“无权限” -->
+            <a href="/ui/companies/{{ company.id }}/legal-persons"
+              >查看法人绑定</a
+            >
+            <a href="/ui/companies/{{ company.id }}/addresses">查看地址</a>
+            <a href="/ui/companies/{{ company.id }}/platforms">查看平台</a>
+            {% endif %}
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Base Info -->
+    <div class="grid">
+      <!-- 第1行：公司名称 / 国家 / 公司编号 -->
+      <div class="kv">
+        <div class="k">公司名称 / Company Name</div>
+        <div class="v">{{ company.company_name or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">国家</div>
+        <div class="v muted">{{ company.country or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">公司编号 / Code</div>
+        <div class="v muted">{{ company.company_code or '-' }}</div>
+      </div>
+
+      <!-- 第2行：VAT / 本地税号 / CUI -->
+      <div class="kv">
+        <div class="k">欧盟税号 / VAT</div>
+        {% set vats = vat_numbers or [] %} {% if vats|length == 0 %}
+        <div class="v muted">-</div>
+        {% else %}
+        <div class="v muted" style="display: flex; gap: 8px; flex-wrap: wrap">
+          {% for v in vats %}
+          <span class="pill">{{ v }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="kv">
+        <div class="k">本地税号 / Local tax no.</div>
+        <div class="v muted">{{ company.vat_number or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">CUI</div>
+        <div class="v muted">{{ company.cui or '-' }}</div>
+      </div>
+
+      <!-- 第3行：注册号 / 注册机构 / 注册时间 -->
+      <div class="kv">
+        <div class="k">注册号 / Nr.</div>
+        <div class="v muted">{{ company.registration_number or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">注册机构 / Registration Authority</div>
+        <div class="v muted">{{ company.registration_authority or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">注册时间 / Register Time</div>
+        <div class="v muted">{{ company.register_time or '-' }}</div>
+      </div>
+
+      <!-- 第4行：公司地址（整行） -->
+      <div class="kv span3">
+        <div class="k">公司地址 / Adresse</div>
+        <div class="v muted">{{ company.address or '-' }}</div>
+      </div>
+
+      <!-- 第5行：邮政编码 + 更新时间 + 创建时间（同一行三列对齐） -->
+      <div class="kv">
+        <div class="k">邮政编码 / postal code</div>
+        <div class="v muted">{{ company.postal_code or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">更新时间</div>
+        <div class="v muted">{{ company.updated_at or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">创建时间</div>
+        <div class="v muted">{{ company.created_at or '-' }}</div>
+      </div>
+
+      <!-- 最后一行：公司域名 -->
+      <div class="kv span2">
+        <div class="k">公司域名 / Domain</div>
+        <div class="v muted">{{ company.company_domain or '-' }}</div>
+      </div>
+
+      <div class="kv">
+        <label>公司状态</label>
+        <div class="v muted">{{ company.company_status or '未设置' }}</div>
+      </div>
+    </div>
+
+    <!-- 公司地址（合并：companies.address + company_addresses） -->
+    <!-- <div class="section">
+      <div class="section-head">
+        <h3>公司地址</h3>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 70px">ID</th>
+            <th>地址</th>
+            <th style="width: 120px">邮编</th>
+            <th style="width: 140px">类型</th>
+            <th style="width: 90px">当前</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          {# ✅ 先显示 companies 表里的 address（如果有） #} {% if
+          company.address %}
+          <tr>
+            <td class="muted">—</td>
+            <td class="muted">{{ company.address }}</td>
+            <td class="muted">{{ company.postal_code }}</td>
+            <td class="muted">primary (companies.address)</td>
+            <td><b>1</b></td>
+            <td class="muted">来自 companies 表</td>
+          </tr>
+          {% endif %} {# ✅ 再显示 company_addresses #} {% for a in addresses %}
+          <tr>
+            <td class="muted">{{ a.id }}</td>
+            <td class="muted">{{ a.address }}</td>
+            <td class="muted">{{ a.postal_code }}</td>
+            <td class="muted">{{ a.address_type }}</td>
+            <td><b>{{ a.is_current }}</b></td>
+            <td class="muted">{{ a.note }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if (not company.address) and (addresses|length == 0) %}
+      <p class="muted" style="margin-top: 10px">暂无地址记录。</p>
+      {% endif %}
+    </div> -->
+
+    <!-- 绑定法人（第二） -->
+    <div class="section">
+      <div class="section-head">
+        <h3>法人信息</h3>
+        <div class="muted">company_legal_persons（点击姓名可查看/编辑）</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <!-- <th style="width: 70px">Link</th>
+            <th style="width: 80px">LP ID</th> -->
+            <th>姓名</th>
+            <th style="width: 120px">国籍</th>
+            <th style="width: 120px">生日</th>
+            <th style="width: 160px">证件号</th>
+            <th style="width: 160px">护照号</th>
+            <th style="width: 140px">角色</th>
+            <th style="width: 170px">绑定时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in legal_persons %}
+          <tr>
+            <td>
+              <a
+                href="/ui/legal-persons/{{ r.legal_person_id }}/edit?company_id={{ company.id }}"
+                style="text-decoration: none; color: black"
+              >
+                <b>{{ r.full_name }}</b>
+              </a>
+            </td>
+            <td class="muted">{{ r.nationality }}</td>
+            <td class="muted">{{ r.birthday }}</td>
+            <td class="muted">{{ r.id_number }}</td>
+            <td class="muted">{{ r.passport_number }}</td>
+            <td class="muted">{{ r.role }}</td>
+            <td class="muted">{{ r.linked_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if legal_persons|length == 0 %}
+      <p class="muted" style="margin-top: 10px">暂无绑定记录。</p>
+      {% endif %}
+    </div>
+
+    <!-- 公司平台（第三） -->
+    <div class="section">
+      <div class="section-head">
+        <h3>公司平台</h3>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 160px">平台</th>
+            <th style="width: 100px">平台邮箱</th>
+            <th style="width: 220px">进度</th>
+            <th style="width: 170px">创建时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in platforms %}
+          <tr>
+            <td>
+              <a
+                href="/ui/company-platforms/{{ p.platform_id }}"
+                style="text-decoration: none; color: black"
+              >
+                <b>{{ p.platform_name }}</b>
+              </a>
+            </td>
+            <td class="muted">{{ p.platform_email }}</td>
+            <td class="muted">{{ p.progress }}</td>
+            <td class="muted">{{ p.created_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if platforms|length == 0 %}
+      <p class="muted" style="margin-top: 10px">暂无平台记录。</p>
+      {% endif %}
+    </div>
+
+    <!-- 最近文档（第四） -->
+    <div class="section">
+      {% if can_docs %} {# 原来的最近文档表格 #} {% else %}
+      <div class="muted" style="padding: 12px">
+        你没有文档权限（Docs），因此不显示该公司的文档列表。
+      </div>
+      {% endif %}
+
+      <div class="section-head">
+        <h3>最近文档</h3>
+        <div class="muted">最多 20 条</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 70px">ID</th>
+            <th>标题</th>
+            <th style="width: 140px">分类</th>
+            <th>原文件名</th>
+            <th style="width: 170px">创建时间</th>
+            <th>Group Key</th>
+            <th style="width: 80px">删除</th>
+            <th style="width: 180px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in docs %}
+          <tr>
+            <td class="muted">{{ d.id }}</td>
+            <td><b>{{ d.title }}</b></td>
+            <td><span class="pill">{{ d.category }}</span></td>
+            <td class="muted">{{ d.original_filename }}</td>
+            <td class="muted">{{ d.created_at }}</td>
+            <td class="muted">{{ d.group_key }}</td>
+            <td>{{ d.is_deleted }}</td>
+            <td class="actions">
+              <a href="/ui/documents/{{ d.id }}">详情</a>
+              <a href="/ui/documents/{{ d.id }}/download">下载</a>
+              {% if d.group_key %}<a href="/ui/groups/{{ d.group_key }}">历史</a
+              >{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if docs|length == 0 %}
+      <p class="muted" style="margin-top: 10px">暂无文档。</p>
+      {% endif %}
+    </div>
+    {% if can_edit %}
+    <form
+      method="post"
+      action="/ui/companies/{{ company.id }}/delete"
+      style="display: inline"
+      onsubmit="return confirm('确定要永久删除该公司吗？此操作不可恢复！')"
+    >
+      <button
+        class="btn secondary"
+        type="submit"
+        style="border-color: rgba(220, 38, 38, 0.25); color: #b00020"
+      >
+        删除公司
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,378 @@
+{% extends "base.html" %} {% block title %}平台概览{% endblock %} {% block crumb
+%}资源管理 / 平台概览{% endblock %} {% block content %} {# ====================
+数据配置区域 ==================== #} {# 默认平台列表 #} {% set fixed_platforms =
+[
+'Kruidvat','OBI','Mydealz','Aunch','Amazon','Temu','Worten','乐华梅兰','Fnac&draty',
+'Conforama','Hood','Fyndiq','Shein','emag','Bol','CDON','Ebay','Etsy','家乐福',
+'Cdiscount','empik','PHH','Allegro','包装法','速卖通','tiktok','onbuy' ] %} {#
+收款方式配置 #} {% set payment_list = [ {'name': 'Skyee', 'link': '<a
+  href="https://www.skyee360.com/invite?aff=LUVIP"
+  target="_blank"
+  >Skyee注册链接</a
+>'}, {'name': 'Payoneer (P卡)', 'link': '公司注册找经理<br />法人：<a
+  href="https://paynr.co/4qbAuHq"
+  target="_blank"
+  >注册</a
+>
+| <a href="https://login.payoneer.com/" target="_blank">登录</a>'}, {'name':
+'WorldFirst (万里汇)', 'link': '<a
+  href="https://portal.worldfirst.com/register?region=NL&default_source=SA175"
+  target="_blank"
+  >注册 (SA175)</a
+>'}, {'name': 'Pingpong', 'link': '<a
+  href="https://business.pingpongx.com/entrance/signup?inviteCode=ZZzhangxj"
+  target="_blank"
+  >注册 (ZZzhangxj)</a
+>'}, {'name': 'Airwallex (空中云汇)', 'link': '<a
+  href="https://www.airwallex.com/app/signup?so=XKzzKwoFztHNk82F--HR002506"
+  target="_blank"
+  >注册</a
+>
+| <a href="https://www.airwallex.com/app/login" target="_blank">登录</a>'},
+{'name': 'XGD (paykka)', 'link': '<a
+  href="https://client.eu.paykka.com/login"
+  target="_blank"
+  >登录</a
+>'}, {'name': 'Wise', 'link': '<a href="https://wise.com" target="_blank"
+  >官网</a
+>'}, {'name': 'Qonto', 'link': 'Qonto'} ] %} {# 合并逻辑 #} {% set display_list
+= [] %} {% for p in fixed_platforms %}{% set _ = display_list.append(p) %}{%
+endfor %} {% for db_key, db_val in db_stats.items() %} {% set is_exist = false
+%} {% for fp in fixed_platforms %} {% if fp|lower == db_key %}{% set is_exist =
+true %}{% endif %} {% endfor %} {% if not is_exist %}{% set _ =
+display_list.append(db_val.platform_name) %}{% endif %} {% endfor %} {#
+==================== 数据配置结束 ==================== #}
+
+<style>
+  /* --- 页面局部样式 --- */
+
+  /* 卡片头部 */
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* 计数胶囊 */
+  .count-badge {
+    background: #f1f5f9;
+    color: var(--text-sub);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* 工具栏 */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 320px;
+  }
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    padding-left: 32px; /* 给图标留位 */
+  }
+
+  /* 表格优化 */
+  .data-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: var(--text-sub);
+  }
+  .data-table td {
+    vertical-align: middle;
+  }
+
+  /* 平台链接 */
+  .platform-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-main);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+  }
+  .platform-item:hover {
+    color: var(--primary);
+  }
+  .platform-icon {
+    width: 32px;
+    height: 32px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #64748b;
+    border: 1px solid var(--border-color);
+  }
+
+  /* 链接样式修复 */
+  .html-link a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .html-link a:hover {
+    text-decoration: underline;
+  }
+
+  /* 布局间距 */
+  .section-gap {
+    height: 24px;
+  }
+</style>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      🛒 电商平台
+      <span class="count-badge" id="platformCountDisplay"
+        >{{ display_list|length }}</span
+      >
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <div class="search-icon">🔍</div>
+      <input
+        id="platformSearch"
+        class="search-input"
+        type="text"
+        placeholder="搜索平台名称 (如 Amazon)..."
+        autocomplete="off"
+      />
+    </div>
+  </div>
+
+  <div style="overflow-x: auto">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>平台名称</th>
+          <th style="width: 140px">关联公司</th>
+          <th style="width: 140px">店铺记录</th>
+          <th style="width: 180px">最近更新</th>
+          <th style="width: 100px; text-align: right">操作</th>
+        </tr>
+      </thead>
+      <tbody id="platformBody">
+        {% for p_name in display_list %} {% set stat =
+        db_stats.get(p_name|lower) %} {% set company_cnt = stat.company_cnt if
+        stat else 0 %} {% set row_cnt = stat.row_cnt if stat else 0 %} {% set
+        last_up = stat.last_updated if stat else '-' %}
+
+        <tr class="platform-row" data-name="{{ p_name|lower }}">
+          <td>
+            <a href="/ui/platforms/{{ p_name }}" class="platform-item">
+              <div class="platform-icon">{{ p_name[0]|upper }}</div>
+              {{ p_name }}
+            </a>
+          </td>
+          <td>
+            {% if company_cnt > 0 %}
+            <span class="pill pill-default">{{ company_cnt }} 家</span>
+            {% else %}
+            <span style="color: var(--text-muted); font-size: 12px">-</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row_cnt > 0 %}
+            <span style="color: var(--text-sub); font-size: 13px"
+              >{{ row_cnt }} 个店铺</span
+            >
+            {% else %}
+            <span style="color: var(--text-muted); font-size: 12px">-</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 13px">
+            {{ last_up }}
+          </td>
+          <td style="text-align: right">
+            <a
+              href="/ui/platforms/{{ p_name }}"
+              class="btn btn-ghost"
+              style="padding: 4px 10px; font-size: 12px"
+            >
+              查看
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div
+      id="platformEmpty"
+      style="
+        padding: 30px;
+        text-align: center;
+        color: var(--text-muted);
+        display: none;
+      "
+    >
+      没有找到匹配的平台
+    </div>
+  </div>
+</div>
+
+<div class="section-gap"></div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      💳 收款渠道
+      <span class="count-badge" id="payCountDisplay"
+        >{{ payment_list|length }}</span
+      >
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <div class="search-icon">🔍</div>
+      <input
+        id="paySearch"
+        class="search-input"
+        type="text"
+        placeholder="搜索收款方式 (如 Skyee)..."
+        autocomplete="off"
+      />
+    </div>
+  </div>
+
+  <div style="overflow-x: auto">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 200px">收款平台</th>
+          <th>说明 / 注册入口</th>
+          <th style="width: 120px; text-align: right">操作</th>
+        </tr>
+      </thead>
+      <tbody id="payBody">
+        {% for pay in payment_list %}
+        <tr class="pay-row" data-name="{{ pay.name|lower }}">
+          <td>
+            <a href="/ui/payments/{{ pay.name }}" class="platform-item">
+              <div
+                class="platform-icon"
+                style="
+                  background: #fff7ed;
+                  color: #ea580c;
+                  border-color: #ffedd5;
+                "
+              >
+                {{ pay.name[0]|upper }}
+              </div>
+              {{ pay.name }}
+            </a>
+          </td>
+          <td
+            class="html-link"
+            style="font-size: 13px; color: var(--text-sub); line-height: 1.6"
+          >
+            {{ (pay.link or '--')|safe }}
+          </td>
+          <td style="text-align: right">
+            <a
+              href="/ui/payments/{{ pay.name }}"
+              class="btn btn-ghost"
+              style="padding: 4px 10px; font-size: 12px"
+            >
+              详情
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div
+      id="payEmpty"
+      style="
+        padding: 30px;
+        text-align: center;
+        color: var(--text-muted);
+        display: none;
+      "
+    >
+      没有找到匹配的收款方式
+    </div>
+  </div>
+</div>
+
+<script>
+  // 通用搜索逻辑
+  function initSearch(inputId, rowClass, emptyId, countId) {
+    const input = document.getElementById(inputId)
+    const rows = Array.from(document.querySelectorAll('.' + rowClass))
+    const emptyEl = document.getElementById(emptyId)
+    const countEl = document.getElementById(countId)
+
+    if (!input) return
+
+    function applyFilter() {
+      const q = input.value.trim().toLowerCase()
+      let visibleCount = 0
+
+      rows.forEach((row) => {
+        const name = row.getAttribute('data-name') || ''
+        const isMatch = !q || name.includes(q)
+        row.style.display = isMatch ? '' : 'none'
+        if (isMatch) visibleCount++
+      })
+
+      if (emptyEl) emptyEl.style.display = visibleCount === 0 ? 'block' : 'none'
+      if (countEl) countEl.textContent = visibleCount
+    }
+
+    input.addEventListener('input', applyFilter)
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        input.value = ''
+        applyFilter()
+      }
+    })
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initSearch(
+      'platformSearch',
+      'platform-row',
+      'platformEmpty',
+      'platformCountDisplay'
+    )
+    initSearch('paySearch', 'pay-row', 'payEmpty', 'payCountDisplay')
+  })
+</script>
+
+{% endblock %}

@@ -1,0 +1,230 @@
+{% extends "base.html" %} {% block title %}公司法人自然人 - 斯本贸易{% endblock
+%} {% block crumb %}Companies / Legal Persons{% endblock %} {% block content %}
+
+<style>
+  /* 本页专用：更松的层级与布局 */
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .page-head h2 {
+    margin: 0;
+  }
+  .head-meta {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .head-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .panel {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  .bind-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+  }
+
+  @media (max-width: 980px) {
+    .bind-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 720px) {
+    .head-actions {
+      margin-left: 0;
+      justify-content: flex-start;
+      width: 100%;
+    }
+    .bind-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* 操作按钮更克制（不改功能） */
+  td.actions {
+    white-space: nowrap;
+  }
+  .mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+    text-decoration: none;
+    transition: background 120ms ease, border-color 120ms ease,
+      transform 120ms ease;
+  }
+  .mini-btn:hover {
+    background: rgba(37, 99, 235, 0.06);
+    border-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+  }
+  .mini-btn.danger {
+    color: #b91c1c;
+    border-color: rgba(185, 28, 28, 0.2);
+    background: rgba(220, 38, 38, 0.04);
+  }
+  .mini-btn.danger:hover {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(185, 28, 28, 0.28);
+  }
+  .actions form {
+    display: inline;
+    margin: 0;
+  }
+  table th,
+  table td {
+    padding: 12px 12px;
+  }
+</style>
+
+<div class="card">
+  <!-- Header -->
+  <div class="page-head">
+    <div>
+      <h2>公司法人/自然人</h2>
+      <div class="head-meta">
+        公司：<b>{{ company.company_name }}</b>（ID：{{ company.id }}）
+      </div>
+    </div>
+
+    <div class="head-actions">
+      <!-- ✅ 新增：从公司上下文新建法人，带 company_id（原链接保留） -->
+      <a
+        class="btn"
+        href="/ui/legal-persons/new?company_id={{ company.id }}"
+        style="text-decoration: none"
+      >
+        + 新建法人
+      </a>
+
+      <!-- ✅ 全站统一返回样式（保留 muted） -->
+      <a class="back muted" href="/ui/companies/{{ company.id }}/edit"
+        >← 返回公司编辑</a
+      >
+    </div>
+  </div>
+
+  <p class="hint2" style="margin-top: 10px">
+    绑定 / 解绑 company_legal_persons（role 可选）。
+  </p>
+
+  <!-- Bind Panel -->
+  <div class="panel">
+    <form
+      method="post"
+      action="/ui/companies/{{ company.id }}/legal-persons/bind"
+    >
+      <div class="bind-grid">
+        <div>
+          <label>选择法人/自然人（active）</label>
+          <select name="legal_person_id">
+            {% for p in candidates %}
+            <option value="{{ p.id }}">
+              #{{ p.id }} - {{ p.full_name }}{% if p.id_number %} / {{
+              p.id_number }}{% endif %}{% if p.passport_number %} / {{
+              p.passport_number }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label>角色（role，可选）</label>
+          <input name="role" placeholder="例如 Director / Shareholder" />
+        </div>
+
+        <div>
+          <button class="btn" type="submit">绑定</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="muted" style="margin-top: 12px">
+    已绑定：<b>{{ bound | length }}</b>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 70px">link_id</th>
+        <th style="width: 80px">lp_id</th>
+        <th>full_name</th>
+        <th style="width: 120px">nationality</th>
+        <th style="width: 120px">birthday</th>
+        <th style="width: 160px">id_number</th>
+        <th style="width: 160px">passport_number</th>
+        <th style="width: 140px">role</th>
+        <th style="width: 170px">linked_at</th>
+        <th style="width: 170px">actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for r in bound %}
+      <tr>
+        <td class="muted">{{ r.link_id }}</td>
+        <td class="muted">{{ r.legal_person_id }}</td>
+        <td><b>{{ r.full_name }}</b></td>
+        <td class="muted">{{ r.nationality }}</td>
+        <td class="muted">{{ r.birthday }}</td>
+        <td class="muted">{{ r.id_number }}</td>
+        <td class="muted">{{ r.passport_number }}</td>
+        <td class="muted">{{ r.role }}</td>
+        <td class="muted">{{ r.linked_at }}</td>
+
+        <td class="actions">
+          <!-- ✅ 编辑带 company_id（原链接保留，只换展示） -->
+          <a
+            class="mini-btn"
+            href="/ui/legal-persons/{{ r.legal_person_id }}/edit?company_id={{ company.id }}"
+          >
+            编辑
+          </a>
+
+          <form
+            method="post"
+            action="/ui/companies/{{ company.id }}/legal-persons/{{ r.link_id }}/unbind"
+            onsubmit="return confirm('确定解绑该法人自然人?');"
+          >
+            <button type="submit" class="mini-btn danger">解绑</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if bound|length == 0 %}
+  <p class="muted" style="margin-top: 12px">暂无绑定记录。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

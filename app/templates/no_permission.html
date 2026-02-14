@@ -1,0 +1,26 @@
+{# app/templates/no_permission.html #} {% extends "base.html" %} {% block title
+%}无权限{% endblock %} {% block crumb %}Permission{% endblock %} {% block
+content %}
+<div class="page">
+  <div class="card" style="padding: 16px">
+    <div class="alert alert-warn" style="margin-bottom: 12px">
+      {{ message }}
+    </div>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+      <a
+        class="btn"
+        href="{{ back_url or '/ui/companies' }}"
+        style="text-decoration: none"
+        >返回</a
+      >
+      <a
+        class="btn btn-primary"
+        href="/ui/companies"
+        style="text-decoration: none"
+        >公司列表</a
+      >
+    </div>
+  </div>
+</div>
+{% endblock %}

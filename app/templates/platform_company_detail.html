@@ -1,0 +1,220 @@
+{% extends "base.html" %} {% block title %}平台公司详情{% endblock %} {% block
+crumb %}Platforms / {{ cp.platform_name }} / Company{% endblock %} {% block
+content %}
+<div class="card">
+  <div
+    style="
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    "
+  >
+    <div>
+      <h2 style="margin: 0">平台公司详情</h2>
+      <div class="hint2" style="margin: 8px 0 0">
+        平台：<b>{{ cp.platform_name }}</b> · 公司：<b>{{ cp.company_name }}</b
+        >（{{ cp.country }}）
+      </div>
+      <div class="muted" style="font-size: 12px">
+        cp_id={{ cp.id }} · company_id={{ cp.company_id }}
+      </div>
+    </div>
+
+    <div
+      style="
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      "
+    >
+      <a class="back" href="/ui/platforms/{{ cp.platform_name | urlencode }}"
+        >← 返回平台</a
+      >
+      <a
+        class="btn ghost"
+        href="/ui/companies/{{ cp.company_id }}"
+        style="text-decoration: none"
+        >进入公司详情</a
+      >
+    </div>
+  </div>
+
+  <div
+    style="
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    "
+  >
+    <div
+      class="kv"
+      style="
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.02);
+      "
+    >
+      <div class="muted">店铺链接</div>
+      <div style="font-weight: 800">{{ cp.store_url or '-' }}</div>
+    </div>
+
+    <div
+      class="kv"
+      style="
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.02);
+      "
+    >
+      <div class="muted">域名</div>
+      <div style="font-weight: 800">{{ cp.domain or '-' }}</div>
+    </div>
+
+    <div
+      class="kv"
+      style="
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.02);
+      "
+    >
+      <div class="muted">是否主平台</div>
+      <div style="font-weight: 800">{{ 1 if cp.is_primary else 0 }}</div>
+    </div>
+
+    <div
+      class="kv"
+      style="
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.02);
+      "
+    >
+      <div class="muted">平台邮箱</div>
+      <div style="font-weight: 800">{{ cp.platform_email or '-' }}</div>
+    </div>
+
+    <div
+      class="kv"
+      style="
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.02);
+      "
+    >
+      <div class="muted">紫鸟IP</div>
+      <div style="font-weight: 800">{{ cp.zini_ip or '-' }}</div>
+    </div>
+
+    <div
+      class="kv"
+      style="
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.02);
+      "
+    >
+      <div class="muted">状态 / 进度</div>
+      <div style="font-weight: 800">
+        {{ cp.status or '-' }} / {{ cp.progress if cp.progress is not none else
+        '-' }}
+      </div>
+    </div>
+
+    <div
+      class="kv"
+      style="
+        grid-column: 1/-1;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.02);
+      "
+    >
+      <div class="muted">备注</div>
+      <div style="font-weight: 700; color: var(--text)">
+        {{ cp.notes or '-' }}
+      </div>
+      <div class="muted" style="margin-top: 8px">
+        创建：{{ cp.created_at or '-' }} · 更新：{{ cp.updated_at or '-' }}
+      </div>
+    </div>
+  </div>
+
+  <div
+    style="
+      margin-top: 18px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    "
+  >
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+      "
+    >
+      <h2 style="margin: 0; font-size: 16px">最近文档（该公司）</h2>
+      <div class="muted" style="font-size: 12px">最多 20 条</div>
+    </div>
+
+    {% if can_docs %}
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 80px">ID</th>
+          <th>标题</th>
+          <th style="width: 120px">分类</th>
+          <th style="width: 120px">文件类别</th>
+          <th style="width: 180px">创建时间</th>
+          <th style="width: 140px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in docs %}
+        <tr>
+          <td class="muted">{{ d.id }}</td>
+          <td><b>{{ d.title }}</b></td>
+          <td><span class="pill">{{ d.category }}</span></td>
+          <td class="muted">{{ d.file_type or '-' }}</td>
+          <td class="muted">{{ d.created_at }}</td>
+          <td class="actions">
+            <a href="/ui/documents/{{ d.id }}">详情</a>
+            <a href="/ui/documents/{{ d.id }}/download">下载</a>
+            {% if d.group_key %}<a href="/ui/groups/{{ d.group_key }}">历史</a
+            >{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if docs|length == 0 %}
+    <div class="muted" style="margin-top: 12px">暂无文档。</div>
+    {% endif %} {% else %}
+    <div
+      class="muted"
+      style="
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        margin-top: 12px;
+      "
+    >
+      你没有文档权限（Docs），因此不显示任何文件信息。
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

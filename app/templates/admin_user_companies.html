@@ -1,0 +1,97 @@
+{% extends "base.html" %} {% block title %}管理员 / 公司权限{% endblock %} {%
+block crumb %}Admin / User Companies{% endblock %} {% block content %}
+<div class="page">
+  <div
+    style="
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    "
+  >
+    <div>
+      <h2 style="margin: 0">公司权限</h2>
+      <div style="color: var(--muted); font-size: 13px; margin-top: 6px">
+        {% if user_row %} 用户：{{ user_row.username }}{% if
+        user_row.display_name %}（{{ user_row.display_name }}）{% endif %} ｜
+        角色：{% if user_row.role=='admin' %}管理员{% else %}普通用户{% endif %}
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      <a
+        class="btn"
+        href="/ui/admin/users"
+        style="text-decoration: none; white-space: nowrap"
+        >返回列表</a
+      >
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="alert alert-warn">{{ error }}</div>
+  {% endif %}
+
+  <div class="card">
+    <form
+      method="post"
+      action="/ui/admin/users/{{ user_row.id }}/companies"
+      style="padding: 0 0 12px 0"
+    >
+      {% for c in companies %}
+      <input type="hidden" name="company_ids" value="{{ c.id }}" />
+      {% endfor %}
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>公司</th>
+              <th style="width: 180px">可查看</th>
+              <th style="width: 180px">可编辑</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in companies %} {% set p = perm_map.get(c.id) %}
+            <tr>
+              <td>{{ c.id }}</td>
+              <td>{{ c.company_name }}</td>
+              <td>
+                <label
+                  style="display: inline-flex; align-items: center; gap: 8px"
+                >
+                  <input type="checkbox" name="can_view_{{ c.id }}" {% if p and
+                  p.can_view==1 %}checked{% endif %}> 查看
+                </label>
+              </td>
+              <td>
+                <label
+                  style="display: inline-flex; align-items: center; gap: 8px"
+                >
+                  <input type="checkbox" name="can_edit_{{ c.id }}" {% if p and
+                  p.can_edit==1 %}checked{% endif %}> 编辑
+                </label>
+                <div class="help">勾选“编辑”将自动包含“查看”。</div>
+              </td>
+            </tr>
+            {% endfor %} {% if companies|length == 0 %}
+            <tr>
+              <td colspan="4" style="color: var(--muted)">暂无公司。</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-actions" style="padding: 0 16px">
+        <button class="btn btn-primary" type="submit">保存权限</button>
+        <a class="btn" href="/ui/admin/users" style="text-decoration: none"
+          >取消</a
+        >
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

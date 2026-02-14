@@ -1,0 +1,447 @@
+{% extends "base.html" %} 
+{% block title %}{% if mode=='edit' %}编辑公司{% else %}新建公司{% endif %} - 斯本贸易{% endblock %} 
+{% block crumb %}Companies / {% if mode=='edit' %}Edit{% else %}New{% endif %}{% endblock %} 
+{% block content %}
+
+<style>
+  /* 保持现有风格 */
+  .form-wrap {
+    max-width: 980px;
+    padding: 18px 18px 14px 18px;
+  }
+
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .page-head h2 {
+    margin: 0;
+  }
+  .head-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .head-spacer {
+    flex: 1;
+  }
+
+  /* 字体层级 */
+  .f-label {
+    font-weight: 700;
+    font-size: 13px;
+    color: rgba(15, 23, 42, 0.88);
+    margin-bottom: 6px;
+    display: inline-flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .f-label .muted {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.55);
+  }
+
+  /* input 样式 */
+  .form-grid input, .form-grid select {
+    color: rgba(15, 23, 42, 0.72);
+  }
+  .form-grid input::placeholder {
+    color: rgba(15, 23, 42, 0.35);
+  }
+
+  /* 网格布局 */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .col-span-2 {
+    grid-column: 1 / -1;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  /* 4列布局，用于某些较短的字段 */
+  .grid-4 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* 区块容器风格 (VAT / 法人) */
+  .section-box {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px; /* 稍微增加内边距 */
+    background: rgba(15, 23, 42, 0.015);
+    margin-top: 8px;
+  }
+  .section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px; /* 增加底部间距 */
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border); /* 虚线分隔标题与内容 */
+  }
+  .section-title {
+    font-weight: 900;
+    color: rgba(15, 23, 42, 0.9);
+    font-size: 15px; /* 标题稍大 */
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-desc {
+    margin-top: 4px;
+    font-size: 13px;
+    color: rgba(15, 23, 42, 0.55);
+    font-weight: normal;
+  }
+
+  /* VAT 行样式 */
+  .vat-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .vat-row input {
+    flex: 1;
+  }
+  .vat-row .btn-x {
+    width: 44px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-weight: 900;
+    cursor: pointer;
+    color: #94a3b8;
+  }
+  .vat-row .btn-x:hover {
+    background: rgba(15, 23, 42, 0.03);
+    color: #ef4444;
+    border-color: #fca5a5;
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 24px; /* 增加顶部间距 */
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 900px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    .grid-2, .grid-4 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="card form-wrap">
+  <div class="page-head">
+    <div class="head-left">
+      <h2>{% if mode=='edit' %}编辑公司{% else %}新建公司{% endif %}</h2>
+    </div>
+    <span class="head-spacer"></span>
+    <a class="back" href="/ui/companies">返回列表</a>
+  </div>
+
+  <p class="hint2" style="margin: 0 0 8px 0">
+    {% if error %}
+    <div class="alert alert-warn" style="margin: 10px 0">{{ error }}</div>
+    {% endif %}
+  </p>
+
+  <form method="post" action="/ui/companies/save" class="form-grid">
+    <input type="hidden" name="company_id" value="{{ company.id or '' }}" />
+
+    <div>
+      <div class="f-label">
+        公司名 / Company Name <span class="muted">*</span>
+      </div>
+      <input
+        name="company_name"
+        value="{{ company.company_name or '' }}"
+        required
+        placeholder="公司名称"
+      />
+    </div>
+
+    <div>
+      <div class="f-label">公司编号 / Code</div>
+      <input
+        name="company_code"
+        value="{{ company.company_code or '' }}"
+        placeholder="例如 HU-01"
+      />
+    </div>
+
+    <div class="grid-2 col-span-2">
+      <div>
+        <div class="f-label">注册号 / Nr.</div>
+        <input
+          name="registration_number"
+          value="{{ company.registration_number or '' }}"
+          placeholder="例如 J2022003878129"
+        />
+      </div>
+
+      <div>
+        <div class="f-label">国家</div>
+        <input
+          name="country"
+          value="{{ company.country or '' }}"
+          placeholder="例如 HU / RO / BG / DE"
+        />
+      </div>
+    </div>
+
+    <div class="col-span-2">
+      <div class="section-box">
+        <div class="section-head">
+          <div>
+            <div class="section-title">🇪🇺 欧盟税号 (VAT)</div>
+            <div class="section-desc">可添加多个税号；列表页默认显示第一条。</div>
+          </div>
+          <button class="btn btn-primary btn-sm" type="button" onclick="addVat()">
+            + 添加 VAT
+          </button>
+        </div>
+
+        <div id="vatList">
+          {% set vats = vat_numbers or [] %} {% if vats|length == 0 %}
+          <div class="vat-row">
+            <input name="vat_numbers" value="" placeholder="VAT number" />
+            <button class="btn-x" type="button" onclick="removeVat(this)" title="删除">×</button>
+          </div>
+          {% else %} {% for v in vats %}
+          <div class="vat-row">
+            <input name="vat_numbers" value="{{ v }}" placeholder="VAT number" />
+            <button class="btn-x" type="button" onclick="removeVat(this)" title="删除">×</button>
+          </div>
+          {% endfor %} {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2 col-span-2">
+      <div>
+        <div class="f-label">统一税务识别号 (CUI)</div>
+        <input name="cui" value="{{ company.cui or '' }}" placeholder="CUI" />
+      </div>
+
+      <div>
+        <div class="f-label">
+          本地税号 / Local tax no.
+        </div>
+        <input
+          name="local_tax_no"
+          value="{{ company.vat_number or '' }}"
+          placeholder="Local tax number"
+        />
+      </div>
+    </div>
+
+    <div class="col-span-2">
+      <div class="f-label">地址 / Adresse</div>
+      <input
+        name="address"
+        value="{{ company.address or '' }}"
+        placeholder="详细地址"
+      />
+    </div>
+
+    <div class="grid-2 col-span-2">
+      <div>
+        <div class="f-label">邮政编码 / postal code</div>
+        <input
+          name="postal_code"
+          value="{{ company.postal_code or '' }}"
+          placeholder="邮编"
+        />
+      </div>
+      <div>
+        <div class="f-label">注册时间 / Register Time</div>
+        <input
+          name="register_time"
+          value="{{ company.register_time or '' }}"
+          placeholder="DD-MM-YYYY"
+        />
+      </div>
+    </div>
+
+    <div class="col-span-2">
+      <div class="f-label">注册机构 / Registration Authority</div>
+      <input
+        name="registration_authority"
+        value="{{ company.registration_authority or '' }}"
+      />
+    </div>
+
+    <div class="col-span-2">
+      <div class="f-label">公司域名 / Domain</div>
+      <input
+        name="company_domain"
+        value="{{ company.company_domain or '' }}"
+      />
+    </div>
+
+    <div>
+      <label class="f-label">公司状态</label>
+      <select name="company_status" {% if not can_edit %}disabled{% endif %}>
+        <option value="">未设置</option>
+        <option value="已注销" {% if company.company_status == '已注销' %}selected{% endif %}>已注销</option>
+        <option value="税号失效" {% if company.company_status == '税号失效' %}selected{% endif %}>税号失效</option>
+        <option value="税号未生效" {% if company.company_status == '税号未生效' %}selected{% endif %}>税号未生效</option>
+        <option value="变更法人" {% if company.company_status == '变更法人' %}selected{% endif %}>变更法人</option>
+        <option value="法人证件过期" {% if company.company_status == '法人证件过期' %}selected{% endif %}>法人证件过期</option>
+      </select>
+    </div>
+
+    {% if mode == 'new' %}
+    <div class="col-span-2">
+      <div class="section-box" style="background: rgba(59, 130, 246, 0.02); border-color: rgba(59, 130, 246, 0.15);">
+        <div class="section-head" style="border-bottom-color: rgba(59, 130, 246, 0.15);">
+          <div>
+            <div class="section-title" style="color: #1e40af;">
+              👤 初始法人信息 <span style="font-size: 11px; color: #60a5fa; background: #eff6ff; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">可选</span>
+            </div>
+            <div class="section-desc" style="color: #64748b;">
+              如需同时创建法人并绑定，请填写以下信息。留空则系统自动忽略。
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <div class="f-label">姓名 (全名) / Full Name <span class="muted" style="font-weight: normal;">*</span></div>
+            <input name="lp_full_name" placeholder="必填：不填则不创建" />
+          </div>
+          <div>
+            <div class="f-label">公司角色 / Role</div>
+            <input name="lp_role" placeholder="例如 Director / Shareholder" />
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;" class="grid-4">
+          <div>
+            <div class="f-label">姓 / Last Name</div>
+            <input name="lp_last_name" />
+          </div>
+          <div>
+            <div class="f-label">名 / First Name</div>
+            <input name="lp_first_name" />
+          </div>
+          <div>
+            <div class="f-label">中间名 / Middle</div>
+            <input name="lp_middle_name" />
+          </div>
+          <div>
+            <div class="f-label">国籍 / Nationality</div>
+            <input name="lp_nationality" placeholder="CN / HU" />
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;" class="grid-2">
+          <div>
+            <div class="f-label">生日 / Birthday</div>
+            <input name="lp_birthday" placeholder="YYYY-MM-DD" />
+          </div>
+          <div>
+            <div class="f-label">身份证号 / ID Number</div>
+            <input name="lp_id_number" />
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;" class="grid-2">
+          <div>
+            <div class="f-label">身份证有效期 / ID Expiry</div>
+            <input name="lp_id_expiry_date" placeholder="YYYY-MM-DD" />
+          </div>
+          <div>
+            <div class="f-label">护照号 / Passport Number</div>
+            <input name="lp_passport_number" />
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;" class="grid-2">
+          <div>
+            <div class="f-label">护照有效期 / Passport Expiry</div>
+            <input name="lp_passport_expiry_date" placeholder="YYYY-MM-DD" />
+          </div>
+          <div>
+            <div class="f-label">邮编 / Postal Code</div>
+            <input name="lp_postal_code" />
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <div class="f-label">法人地址 / Legal Address</div>
+          <input name="lp_legal_address" placeholder="可选" />
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">保存所有信息</button>
+      <a class="back muted" href="/ui/companies" style="margin-left: 10px;">取消</a>
+      
+      {% if mode=='edit' and company.deleted_at is not none %}
+      <span class="pill" style="border-color: rgba(176, 0, 32, 0.25); color: #b00020; margin-left: auto;">
+        已删除
+      </span>
+      {% endif %}
+    </div>
+
+  </form>
+</div>
+
+<script>
+  function addVat() {
+    const wrap = document.getElementById('vatList')
+    const row = document.createElement('div')
+    row.className = 'vat-row'
+    row.innerHTML = `
+      <input name="vat_numbers" value="" placeholder="VAT number" />
+      <button class="btn-x" type="button" onclick="removeVat(this)" title="删除">×</button>
+    `
+    wrap.appendChild(row)
+  }
+
+  function removeVat(btn) {
+    const wrap = document.getElementById('vatList')
+    const rows = wrap.querySelectorAll('.vat-row')
+    if (rows.length <= 1) {
+      const input = rows[0].querySelector('input[name="vat_numbers"]')
+      if (input) input.value = ''
+      return
+    }
+    btn.closest('.vat-row').remove()
+  }
+</script>
+
+{% endblock %}

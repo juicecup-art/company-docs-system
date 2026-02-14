@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>{% block title %}斯本贸易 · 文档管理{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #f7f8fb;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #64748b;
+        --border: #e6eaf2;
+        --primary: #2563eb;
+        --primary2: #1d4ed8;
+
+        --shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+        --shadow2: 0 10px 28px rgba(15, 23, 42, 0.08);
+        --radius: 14px;
+
+        --sidebar: #0b1220;
+        --sidebar2: #0f1b33;
+        --sidebarText: #e5e7eb;
+        --sidebarMuted: rgba(229, 231, 235, 0.65);
+
+        --chipBg: rgba(15, 23, 42, 0.06);
+        --chipBorder: rgba(15, 23, 42, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+        background: radial-gradient(
+            900px 500px at 20% 0%,
+            rgba(37, 99, 235, 0.06),
+            transparent 60%
+          ),
+          radial-gradient(
+            700px 420px at 90% 10%,
+            rgba(15, 23, 42, 0.05),
+            transparent 55%
+          ),
+          var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .layout {
+        min-height: 100vh;
+        display: flex;
+      }
+
+      .sidebar {
+        width: 268px;
+        background: linear-gradient(180deg, var(--sidebar), var(--sidebar2));
+        color: var(--sidebarText);
+        padding: 18px 14px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 10px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 14px;
+      }
+
+      .logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: rgba(37, 99, 235, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      .brand .name {
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        line-height: 1.1;
+      }
+      .brand .desc {
+        font-size: 12px;
+        color: var(--sidebarMuted);
+        margin-top: 4px;
+        line-height: 1.2;
+      }
+
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px;
+      }
+      .nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 10px;
+        border-radius: 12px;
+        text-decoration: none;
+        color: var(--sidebarText);
+        border: 1px solid transparent;
+        transition: background 120ms ease, border-color 120ms ease,
+          transform 120ms ease;
+      }
+      .nav a:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.1);
+        transform: translateY(-1px);
+      }
+      .nav .active {
+        background: rgba(37, 99, 235, 0.16);
+        border-color: rgba(37, 99, 235, 0.38);
+      }
+      .nav .hint {
+        font-size: 11px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--sidebarMuted);
+        padding: 10px 10px 0;
+      }
+
+      .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .topbar {
+        background: rgba(255, 255, 255, 0.86);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(10px);
+      }
+
+      .crumb {
+        color: var(--muted);
+        font-size: 13px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        white-space: nowrap;
+      }
+      .crumb strong {
+        color: var(--text);
+        font-weight: 800;
+        font-size: 13px;
+      }
+
+      .spacer {
+        flex: 1;
+      }
+
+      .topbar a {
+        color: var(--muted);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        transition: background 120ms ease, border-color 120ms ease,
+          color 120ms ease;
+        white-space: nowrap;
+      }
+      .topbar a:hover {
+        color: var(--text);
+        background: rgba(15, 23, 42, 0.04);
+        border-color: rgba(15, 23, 42, 0.08);
+      }
+
+      .chip {
+        font-size: 12px;
+        color: rgba(15, 23, 42, 0.72);
+        background: var(--chipBg);
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--chipBorder);
+        white-space: nowrap;
+      }
+
+      .content {
+        padding: 18px;
+        max-width: 1180px;
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 10px;
+      }
+      h2 {
+        font-size: 18px;
+        letter-spacing: 0.1px;
+      }
+      .hint2 {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 0 12px;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 6px 0;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        outline: none;
+        font-size: 14px;
+        background: #fff;
+        transition: box-shadow 120ms ease, border-color 120ms ease;
+      }
+      input:focus,
+      select:focus {
+        border-color: rgba(37, 99, 235, 0.4);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+      }
+
+      .btn {
+        padding: 11px 14px;
+        border: 0;
+        border-radius: 12px;
+        cursor: pointer;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 800;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+        transition: transform 120ms ease, background 120ms ease,
+          box-shadow 120ms ease;
+      }
+      .btn:hover {
+        background: var(--primary2);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24);
+      }
+      .btn:active {
+        transform: translateY(0px);
+      }
+
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        font-weight: 800;
+        box-shadow: none;
+      }
+      .btn.ghost:hover {
+        border-color: rgba(15, 23, 42, 0.14);
+        background: rgba(15, 23, 42, 0.03);
+        transform: translateY(-1px);
+      }
+      /* =========================
+   Global Back Link/Button
+   ========================= */
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 13px;
+        line-height: 1;
+        white-space: nowrap;
+        box-shadow: none;
+        transition: background 120ms ease, border-color 120ms ease,
+          transform 120ms ease;
+      }
+
+      .back:hover {
+        background: rgba(15, 23, 42, 0.03);
+        border-color: rgba(15, 23, 42, 0.16);
+        transform: translateY(-1px);
+      }
+
+      .back:active {
+        transform: translateY(0);
+      }
+
+      /* 更“弱”的返回（如果有些页面按钮太多可用） */
+      .back.muted {
+        color: var(--muted);
+      }
+      .back.muted:hover {
+        color: var(--text);
+      }
+
+      .msg-ok {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(22, 163, 74, 0.07);
+        border: 1px solid rgba(22, 163, 74, 0.18);
+        color: #15803d;
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      .msg-err {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(220, 38, 38, 0.06);
+        border: 1px solid rgba(220, 38, 38, 0.18);
+        color: #b91c1c;
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: visible; /* ✅ 关键：不裁剪下拉 */
+        margin-top: 12px;
+        background: #fff;
+      }
+      /* ✅ 让表格仍然有圆角，但不靠 overflow:hidden */
+      thead tr:first-child th:first-child {
+        border-top-left-radius: 14px;
+      }
+      thead tr:first-child th:last-child {
+        border-top-right-radius: 14px;
+      }
+
+      tbody tr:last-child td:first-child {
+        border-bottom-left-radius: 14px;
+      }
+      tbody tr:last-child td:last-child {
+        border-bottom-right-radius: 14px;
+      }
+      .action-menu[open] {
+        z-index: 80;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+      th {
+        background: rgba(15, 23, 42, 0.03);
+        font-size: 12px;
+        color: rgba(15, 23, 42, 0.74);
+        letter-spacing: 0.2px;
+      }
+      tbody tr:hover td {
+        background: rgba(37, 99, 235, 0.03);
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.03);
+        font-size: 12px;
+        color: rgba(15, 23, 42, 0.8);
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .actions a {
+        margin-right: 10px;
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 13px;
+      }
+      .actions a:hover {
+        color: var(--primary2);
+        text-decoration: underline;
+      }
+
+      pre {
+        background: #0b1020;
+        color: #e5e7eb;
+        padding: 14px;
+        border-radius: 14px;
+        overflow: auto;
+        font-size: 12px;
+        line-height: 1.5;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .footer {
+        margin-top: auto;
+        border-top: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+      }
+      .footer .inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 12px 18px;
+        color: rgba(15, 23, 42, 0.55);
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width: 980px) {
+        .sidebar {
+          display: none;
+        }
+        .content {
+          padding: 14px;
+        }
+        .topbar {
+          padding: 10px 12px;
+          gap: 8px;
+        }
+        .topbar a {
+          padding: 6px 8px;
+        }
+      }
+      /* ====== Forms / Layout helpers (新增) ====== */
+      .toolbar {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .toolbar .titleblock h2 {
+        margin: 0;
+      }
+      .toolbar .titleblock .hint2 {
+        margin: 6px 0 0;
+      }
+
+      .form {
+        margin-top: 14px;
+        max-width: 920px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 12px;
+      }
+      .col-12 {
+        grid-column: span 12;
+      }
+      .col-8 {
+        grid-column: span 8;
+      }
+      .col-6 {
+        grid-column: span 6;
+      }
+      .col-4 {
+        grid-column: span 4;
+      }
+      .col-3 {
+        grid-column: span 3;
+      }
+
+      .field {
+        min-width: 0;
+      }
+
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        outline: none;
+        font-size: 14px;
+        background: #fff;
+        transition: box-shadow 120ms ease, border-color 120ms ease;
+        resize: vertical;
+        min-height: 110px;
+      }
+      textarea:focus {
+        border-color: rgba(37, 99, 235, 0.4);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+      }
+
+      .section {
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px dashed rgba(15, 23, 42, 0.12);
+      }
+      .section h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        letter-spacing: 0.1px;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px;
+        background: #fff;
+      }
+
+      .btn-row {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      /* 状态/优先级更直观（不改值，仅样式） */
+      .pill.is-new {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.22);
+      }
+      .pill.is-progress {
+        background: rgba(245, 158, 11, 0.1);
+        border-color: rgba(245, 158, 11, 0.25);
+      }
+      .pill.is-ok {
+        background: rgba(22, 163, 74, 0.1);
+        border-color: rgba(22, 163, 74, 0.25);
+      }
+      .pill.is-bad {
+        background: rgba(220, 38, 38, 0.08);
+        border-color: rgba(220, 38, 38, 0.22);
+      }
+
+      .status-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .status-actions form {
+        margin: 0;
+      }
+
+      @media (max-width: 980px) {
+        .form-grid {
+          grid-template-columns: repeat(6, 1fr);
+        }
+        .col-8,
+        .col-6,
+        .col-4,
+        .col-3 {
+          grid-column: span 6;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">SI</div>
+          <div>
+            <div class="name">斯本贸易</div>
+            <div class="desc">文档管理 · 内部后台</div>
+          </div>
+        </div>
+
+        <div class="nav">
+          <div class="hint">导航</div>
+          {% if current_user and current_user.role == 'admin' %}
+          <a class="nav-link" href="/ui/admin/users">用户管理</a>
+          {% endif %}
+          <a
+            href="/ui/companies"
+            class="{% if active=='companies' %}active{% endif %}"
+          >
+            <span>公司管理</span>
+          </a>
+
+          <a
+            href="/ui/tickets"
+            class="{% if active=='tickets' %}active{% endif %}"
+          >
+            <span>工单</span>
+          </a>
+
+          <a
+            href="/ui/platforms"
+            class="{% if active=='platforms' %}active{% endif %}"
+          >
+            <span>注册</span>
+          </a>
+
+          <!-- <a
+            href="/ui/legal-persons"
+            class="{% if active=='legal_persons' %}active{% endif %}"
+          >
+            <span>法人/自然人</span>
+          </a> -->
+
+          <!-- <a
+            href="/ui/upload"
+            class="{% if active=='upload' %}active{% endif %}"
+          >
+            <span>⬆️</span><span>上传文档</span>
+          </a> -->
+
+          <a
+            href="/ui/documents"
+            class="{% if active=='documents' %}active{% endif %}"
+          >
+            <span>文档列表</span>
+          </a>
+
+          <!-- <a href="/docs" target="_blank">
+            <span>接口文档</span>
+          </a>
+ -->
+          <div class="hint" style="margin-top: 10px">账号</div>
+          <a href="/ui/logout"><span>退出登录</span></a>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="main">
+        <div class="topbar">
+          <div class="crumb">
+            <strong>斯本贸易</strong>
+            <span>·</span>
+            <span>{% block crumb %}仪表盘{% endblock %}</span>
+          </div>
+
+          <span class="spacer"></span>
+
+          <span class="chip">后端：FastAPI</span>
+
+          {% if current_user is defined and current_user %}
+          <span class="chip"
+            >👤 用户：{{ current_user.display_name or current_user.username
+            }}</span
+          >
+          {% else %}
+          <span class="chip">👤 用户：访客</span>
+          {% endif %}
+
+          <span class="chip">数据库：MySQL</span>
+
+          <!-- 链接地址不改，只改显示文字 -->
+          <a href="/ui/upload">上传</a>
+          <a href="/ui/documents">文档</a>
+          <a href="/ui/companies">公司</a>
+          <a href="/ui/logout">退出</a>
+        </div>
+
+        <div class="content">{% block content %}{% endblock %}</div>
+
+        <footer class="footer">
+          <div class="inner">
+            <div>© 2025 斯本贸易 · 内部管理系统</div>
+            <div class="muted">Company Document Management System</div>
+          </div>
+        </footer>
+      </main>
+    </div>
+  </body>
+  <script>
+    ;(function () {
+      // 只处理你这个下拉：details.action-menu
+      function closeAll(except) {
+        document.querySelectorAll('details.action-menu[open]').forEach((d) => {
+          if (except && d === except) return
+          d.removeAttribute('open')
+        })
+      }
+
+      // 点击页面空白：关闭所有
+      document.addEventListener('click', function (e) {
+        const menu = e.target.closest('details.action-menu')
+        if (!menu) closeAll(null)
+      })
+
+      // 打开某一个时：关闭其它
+      document.addEventListener('toggle', function (e) {
+        const d = e.target
+        if (d && d.matches && d.matches('details.action-menu') && d.open) {
+          closeAll(d)
+        }
+      })
+
+      // Esc：关闭所有
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeAll(null)
+      })
+    })()
+    ;(function () {
+      // ✅ 只让左侧导航栏的新链接新开标签
+      document.querySelectorAll('.sidebar .nav a').forEach((a) => {
+        // 可选：不让退出登录新开标签（如果你希望退出仍在当前页）
+        // if (a.getAttribute('href') === '/ui/logout') return
+
+        a.setAttribute('target', '_blank')
+        a.setAttribute('rel', 'noopener noreferrer')
+      })
+    })()
+  </script>
+</html>

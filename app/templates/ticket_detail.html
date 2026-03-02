@@ -392,8 +392,12 @@
     </div>
 
     <div class="meta-item-flat">
-      <div class="label">关联公司/平台</div>
-      <div class="value">{{ ticket.company_name or '-' }} / {{ ticket.platform_name or '-' }}</div>
+      <div class="label">关联公司</div>
+      <div class="value">{{ ticket.company_name or '-' }}</div>
+    </div>
+    <div class="meta-item-flat">
+      <div class="label">平台</div>
+      <div class="value">{{ ticket.platform_name or '-' }}</div>
     </div>
 
     <div class="meta-item-flat">
@@ -498,7 +502,7 @@
         <form method="post" action="/ui/tickets/{{ ticket.id }}/assign">
           <div class="assign-head">
             <div class="assign-left">
-              <div class="assign-title">👥 协作负责人指派</div>
+              <div class="assign-title">负责人</div>
               <div class="assign-hint">按住 Ctrl/Command 可多选</div>
             </div>
       

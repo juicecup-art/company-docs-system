@@ -1,6 +1,6 @@
 {% extends "base.html" %} {% block title %}{% if mode=="new" %}新建{% else
-%}编辑{% endif %}法人/自然人 - 斯本贸易{% endblock %} {% block crumb %}Legal
-Persons / Form{% endblock %} {% block content %}
+%}编辑{% endif %}斯本贸易 - 新建法人{% endblock %} {% block crumb %}法人 -
+新建法人{% endblock %} {% block content %}
 
 <style>
   .page-head {
@@ -153,6 +153,7 @@ set can_write = false %} {% endif %}
     </div>
 
     <div class="head-actions">
+      <a class="mini-btn" href="/ui/companies/{{ company.id }}">返回该公司</a>
       {% if company %}
       <a class="back muted" href="/ui/companies/{{ company.id }}/legal-persons"
         >← 返回该公司法人列表</a
@@ -386,11 +387,7 @@ set can_write = false %} {% endif %}
     <div class="form-actions">
       {% if can_write %}
       <button class="btn" type="submit">保存</button>
-      {% endif %} {% if company %}
-      <a class="mini-btn" href="/ui/companies/{{ company.id }}/legal-persons"
-        >返回该公司</a
-      >
-      {% else %}
+      {% endif %} {% if company %} {% else %}
       <a class="mini-btn" href="/ui/legal-persons">返回列表</a>
       {% endif %}
     </div>

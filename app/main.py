@@ -21,7 +21,8 @@ Company Document Management System (FastAPI + SQLAlchemy Core)
 - 查询结果使用 .mappings().first() 方便转 dict。
 - MySQL 风格：使用 NOW() 和 LAST_INSERT_ID()（如果你换成 PostgreSQL，需要改这两处）。
 """
-
+from dotenv import load_dotenv
+load_dotenv()
 from typing import Optional, Any, Dict
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -1007,3 +1008,25 @@ def restore_document(doc_id: int):
         if res.rowcount == 0:
             raise HTTPException(status_code=404, detail="Document not found or not deleted")
         return {"ok": True, "id": doc_id}
+import os
+@app.get("/test-feishu")
+async def test_feishu():
+    import os
+    from app.services.feishu_notify import send_feishu_card
+
+    wh = (os.getenv("FEISHU_WEBHOOK") or "").strip()
+    sec = (os.getenv("FEISHU_SECRET") or "").strip()
+
+    card = {
+        "schema": "2.0",
+        "header": {"title": {"tag": "plain_text", "content": "测试通知"}, "template": "blue"},
+        "body": {"elements": [{"tag": "markdown", "content": "飞书通知测试 ✅"}]},
+    }
+
+    resp = await send_feishu_card(card)
+
+    return {
+        "wh_tail": wh[-12:] if wh else "",
+        "sec_tail": sec[-8:] if sec else "",
+        "feishu_resp": resp,
+    }

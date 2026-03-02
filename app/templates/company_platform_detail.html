@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}平台详情 - 斯本贸易{% endblock %}
+{% block title %}斯本贸易 - 平台详情{% endblock %}
 {% block crumb %}Companies / Platforms / Detail{% endblock %}
-
+{% import "_ui_macros.html" as ui %}
 {% block content %}
 
 <style>
@@ -381,10 +381,12 @@
     </div>
 
     <div class="head-actions">
-      <a class="back muted" href="/ui/platforms">← 返回平台列表</a>
-      <a class="back muted" href="/ui/companies/{{ company.id }}/edit">← 返回公司编辑</a>
-      <a class="back muted" href="/ui/companies/{{ company.id }}/platforms">← 返回该公司平台列表</a>
-    </div>
+      <div class="head-actions">
+        {{ ui.back('/ui/companies/' ~ company.id, '返回该公司', 'default') }}
+        {{ ui.back('/ui/platforms', '平台列表', 'ghost') }}
+        {{ ui.back('/ui/companies/' ~ company.id ~ '/edit', '编辑公司', 'ghost') }}
+        {{ ui.back('/ui/companies/' ~ company.id ~ '/platforms', '公司平台', 'ghost') }}
+      </div>    </div>
   </div>
 
   <!-- 平台信息（布局不改） -->
@@ -416,7 +418,7 @@
         </div>
 
         <div>
-          <label>紫鸟平台</label>
+          <label>紫鸟ip</label>
           <input name="zini_ip" value="{{ platform.zini_ip or '' }}" placeholder="例如 DE-01"
             {% if not can_edit %}disabled{% endif %}/>
         </div>

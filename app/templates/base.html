@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <title>{% block title %}斯本贸易 · 文档管理{% endblock %}</title>
+    <title>{% block title %}斯本贸易{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       :root {
@@ -591,6 +591,81 @@
           grid-column: span 6;
         }
       }
+      .btn {
+        height: 42px;
+        padding: 0 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        font-size: 14px;
+        border: 1px solid var(--border);
+        text-decoration: none;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .btn.btn-secondary {
+        background: #fff;
+        color: var(--text);
+        border-color: var(--border);
+        box-shadow: none;
+      }
+      .btn.btn-secondary:hover {
+        background: rgba(15, 23, 42, 0.04);
+        border-color: rgba(15, 23, 42, 0.18);
+        transform: translateY(-1px);
+      }
+      /* 必须写成 .btn.btn-secondary.back-* 才能覆盖 btn-secondary */
+      .btn.btn-secondary.back-soft {
+        background: rgba(15, 23, 42, 0.02);
+        border-color: rgba(15, 23, 42, 0.1);
+        color: rgba(15, 23, 42, 0.78);
+        box-shadow: none;
+      }
+
+      .btn.btn-secondary.back-ghost {
+        background: transparent;
+        border-color: rgba(15, 23, 42, 0.08);
+        color: rgba(15, 23, 42, 0.62);
+        box-shadow: none;
+      }
+
+      .btn.btn-secondary.back-ghost:hover {
+        background: rgba(15, 23, 42, 0.03);
+        border-color: rgba(15, 23, 42, 0.14);
+        color: rgba(15, 23, 42, 0.85);
+      }
+      .btn svg {
+        flex: 0 0 auto;
+      }
+      /* 三档：主 / 次 / 弱 */
+      .back-default {
+        /* 默认就是你现在的 btn-secondary，啥也不加也行 */
+      }
+
+      .back-soft {
+        background: rgba(15, 23, 42, 0.02);
+        border-color: rgba(15, 23, 42, 0.1);
+        color: rgba(15, 23, 42, 0.78);
+        box-shadow: none;
+      }
+
+      .back-ghost {
+        background: transparent;
+        border-color: rgba(15, 23, 42, 0.08);
+        color: rgba(15, 23, 42, 0.62);
+        box-shadow: none;
+      }
+
+      .back-ghost:hover {
+        background: rgba(15, 23, 42, 0.03);
+        border-color: rgba(15, 23, 42, 0.14);
+        color: rgba(15, 23, 42, 0.85);
+      }
     </style>
   </head>
 
@@ -733,15 +808,15 @@
         if (e.key === 'Escape') closeAll(null)
       })
     })()
-    ;(function () {
-      // ✅ 只让左侧导航栏的新链接新开标签
-      document.querySelectorAll('.sidebar .nav a').forEach((a) => {
-        // 可选：不让退出登录新开标签（如果你希望退出仍在当前页）
-        // if (a.getAttribute('href') === '/ui/logout') return
+    // ;(function () {
+    //   // ✅ 只让左侧导航栏的新链接新开标签
+    //   document.querySelectorAll('.sidebar .nav a').forEach((a) => {
+    //     // 可选：不让退出登录新开标签（如果你希望退出仍在当前页）
+    //     // if (a.getAttribute('href') === '/ui/logout') return
 
-        a.setAttribute('target', '_blank')
-        a.setAttribute('rel', 'noopener noreferrer')
-      })
-    })()
+    //     a.setAttribute('target', '_blank')
+    //     a.setAttribute('rel', 'noopener noreferrer')
+    //   })
+    // })()
   </script>
 </html>

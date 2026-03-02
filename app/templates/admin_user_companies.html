@@ -1,5 +1,6 @@
-{% extends "base.html" %} {% block title %}管理员 / 公司权限{% endblock %} {%
-block crumb %}Admin / User Companies{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}斯本贸易 - 公司权限{% endblock %} {%
+block crumb %}Admin / User 公司管理{% endblock %} {% block content %}{% import
+"_ui_macros.html" as ui %}
 <div class="page">
   <div
     style="
@@ -19,14 +20,7 @@ block crumb %}Admin / User Companies{% endblock %} {% block content %}
         {% endif %}
       </div>
     </div>
-    <div>
-      <a
-        class="btn"
-        href="/ui/admin/users"
-        style="text-decoration: none; white-space: nowrap"
-        >返回列表</a
-      >
-    </div>
+    <div>{{ ui.back('/ui/admin/users', '用户管理') }}</div>
   </div>
 
   {% if error %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %} {% block title %}未找到{% endblock %} {% block crumb
+%}Not Found{% endblock %} {% block content %}
+<div class="card">
+  <h2 style="margin: 0 0 8px 0">😵 未找到</h2>
+  <p class="muted" style="margin: 0 0 14px 0">
+    你访问的资源不存在，或已被删除。
+  </p>
+  <a class="btn" href="javascript:history.back()" style="text-decoration: none"
+    >返回上一页</a
+  >
+  <a class="btn btn-ghost" href="/ui/platforms" style="text-decoration: none"
+    >回到平台概览</a
+  >
+</div>
+{% endblock %}

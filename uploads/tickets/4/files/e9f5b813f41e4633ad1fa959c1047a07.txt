@@ -1,0 +1,2 @@
+start &#34;&#34;D:\app\Weixin\Weixin.exe
+start &#34;&#34;D:\app\Weixin\Weixin.exe

@@ -1,7 +1,4 @@
-{% extends "base.html" %} {% block title %}平台概览 - {{ platform_name }}{%
-endblock %} {% block crumb %}Platforms / {{ platform_name }}{% endblock %} {%
-block content %} {# --- 1. 数据配置区：已嵌入 SVG 图标 --- #} {#
-我们定义几个简单的 SVG 图标字符串，方便复用 #} {% set icon_link = '<svg
+{% extends "base.html" %} {% block title %}斯本贸易 - 平台信息{{ platform_name }}{% endblock %} {% block crumb %}注册 / {{ platform_name }}{% endblock %} {% block content %} {% import "_ui_macros.html" as ui %}{% set icon_link = '<svg
   viewBox="0 0 24 24"
   width="14"
   height="14"
@@ -87,21 +84,7 @@ platform_links_map.get(platform_name) %}
         <span class="subtitle">关联公司 {{ rows|length }} 家</span>
       </div>
     </div>
-    <div class="header-right">
-      <a class="nav-back" href="/ui/platforms">
-        <svg
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          stroke="currentColor"
-          stroke-width="2"
-          fill="none"
-        >
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-        返回列表
-      </a>
-    </div>
+    <div class="header-right">{{ ui.back('/ui/platforms', '列表') }}</div>
   </div>
 
   {# --- 3. 快捷操作栏 (如果有链接) --- #} {% if current_links %}

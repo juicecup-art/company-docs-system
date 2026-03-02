@@ -1,5 +1,6 @@
-{% extends "base.html" %} {% block title %}公司法人自然人 - 斯本贸易{% endblock
-%} {% block crumb %}Companies / Legal Persons{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}斯本贸易 - 公司法人{% endblock %} {%
+block crumb %}公司 / 法人{% endblock %} {% block content %}{% import
+"_ui_macros.html" as ui %}
 
 <style>
   /* 本页专用：更松的层级与布局 */
@@ -116,6 +117,7 @@
 
     <div class="head-actions">
       <!-- ✅ 新增：从公司上下文新建法人，带 company_id（原链接保留） -->
+      {{ ui.back('/ui/legal-persons', '法人列表') }}
       <a
         class="btn"
         href="/ui/legal-persons/new?company_id={{ company.id }}"

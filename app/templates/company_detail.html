@@ -1,7 +1,29 @@
-{% extends "base.html" %} {% block title %}公司详情 - 斯本贸易{% endblock %} {%
-block crumb %}Companies / Detail{% endblock %} {% block content %}
-
+{% extends "base.html" %} {% block title %}斯本贸易 / 公司详情{% endblock %} {%
+block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% import
+"_ui_macros.html" as ui %}
 <style>
+  /* 平台列表：超过一定高度滚动 */
+  .pl-scroll {
+    max-height: 320px; /* 约 5 行左右，按你表格行高可微调 */
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  /* 滚动容器里 table 不要再自己加外边框（否则双边框） */
+  .pl-scroll table {
+    margin-top: 0;
+    border: none;
+    border-radius: 0;
+  }
+
+  /* 标题行右侧按钮 */
+  .section-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
   .page {
     display: flex;
     flex-direction: column;
@@ -219,12 +241,7 @@ block crumb %}Companies / Detail{% endblock %} {% block content %}
           >查看文档</a
         >
 
-        <a
-          class="btn secondary"
-          href="/ui/companies"
-          style="text-decoration: none"
-          >返回列表</a
-        >
+        {{ ui.back('/ui/companies', '返回列表') }}
 
         <!-- 更多操作：写入口只对 can_edit 展示；只读用户保留“查看类入口” -->
         <details class="action-menu">
@@ -433,29 +450,51 @@ block crumb %}Companies / Detail{% endblock %} {% block content %}
       {% endif %}
     </div>
 
-    <!-- 公司平台（第三） -->
-    <div class="section">
-      <div class="section-head">
-        <h3>公司平台</h3>
-      </div>
+<!-- 公司平台（第三） -->
+<div class="section">
+  <div class="section-head">
+    <h3>公司平台</h3>
 
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 160px">平台</th>
-            <th style="width: 100px">平台邮箱</th>
-            <th style="width: 220px">进度</th>
-            <th style="width: 170px">创建时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in platforms %}
+    <div class="section-actions">
+      {% if can_edit %}
+      <button type="button" class="btn btn-secondary back-soft" id="btnAddPlatform">
+        ➕ 添加平台或收款
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 1) 定义哪些名字算“收款渠道” #}
+  {% set pay_names = ['skyee','payoneer','worldfirst','pingpong'] %}
+
+  {# 2) 拆两组 #}
+  {% set ns = namespace(ecom=[], pay=[]) %}
+  {% for p in platforms %}
+    {% set n = (p.platform_name or '')|lower %}
+    {% if n in pay_names %}
+      {% set _ = ns.pay.append(p) %}
+    {% else %}
+      {% set _ = ns.ecom.append(p) %}
+    {% endif %}
+  {% endfor %}
+
+  {# =============== 平台列表（固定显示，超过5条滚动） =============== #}
+  <div class="pl-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 160px">平台</th>
+          <th style="width: 100px">平台邮箱</th>
+          <th style="width: 220px">进度</th>
+          <th style="width: 170px">创建时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if ns.ecom|length > 0 %}
+          {% for p in ns.ecom %}
           <tr>
             <td>
-              <a
-                href="/ui/company-platforms/{{ p.platform_id }}"
-                style="text-decoration: none; color: black"
-              >
+              <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
                 <b>{{ p.platform_name }}</b>
               </a>
             </td>
@@ -464,13 +503,85 @@ block crumb %}Companies / Detail{% endblock %} {% block content %}
             <td class="muted">{{ p.created_at }}</td>
           </tr>
           {% endfor %}
-        </tbody>
-      </table>
-      {% if platforms|length == 0 %}
-      <p class="muted" style="margin-top: 10px">暂无平台记录。</p>
-      {% endif %}
-    </div>
+        {% else %}
+          <tr>
+            <td colspan="4" class="muted">暂无平台记录。</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 
+  {# =============== 收款渠道（固定显示，哪怕没有也显示） =============== #}
+  <div style="margin-top: 12px; font-weight: 800; padding: 6px 2px">
+    收款渠道
+  </div>
+
+  <div class="pl-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 160px">平台</th>
+          <th style="width: 100px">平台邮箱</th>
+          <th style="width: 220px">进度</th>
+          <th style="width: 170px">创建时间</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% if ns.pay|length > 0 %}
+          {% for p in ns.pay %}
+          <tr>
+            <td>
+              <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
+                <b>{{ p.platform_name }}</b>
+              </a>
+            </td>
+            <td class="muted">{{ p.platform_email }}</td>
+            <td class="muted">{{ p.progress }}</td>
+            <td class="muted">{{ p.created_at }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="4" class="muted">暂无收款渠道记录。</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {# =============== Add Panel（默认隐藏，点“添加平台”展开） =============== #}
+  {% if can_edit %}
+  <form id="addPlatformForm" method="post" action="/ui/companies/{{ company.id }}/platforms/add">
+    <div class="panel" id="addPlatformPanel" style="display:none; margin-top: 12px;">
+      <form method="post" action="/ui/companies/{{ company.id }}/platforms/add">
+        <div class="form-grid">
+          <div>
+            <label>平台名称（platform_name） *</label>
+            <input name="platform_name" placeholder="例如 Amazon / eMAG / Shopify" required />
+          </div>
+
+        <div>
+          <label>店铺链接（store_url）</label>
+          <input name="store_url" placeholder="https://..." />
+        </div>
+
+        <div>
+          <label>域名（domain）</label>
+          <input name="domain" placeholder="example.com" />
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          <button class="btn" type="submit">新增平台</button>
+          <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPlatform">取消</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+</div>
+    </div>
     <!-- 最近文档（第四） -->
     <div class="section">
       {% if can_docs %} {# 原来的最近文档表格 #} {% else %}
@@ -539,5 +650,64 @@ block crumb %}Companies / Detail{% endblock %} {% block content %}
     {% endif %}
   </div>
 </div>
+<script>
+  (function () {
+    const btn = document.getElementById('btnAddPlatform')
+    const panel = document.getElementById('addPlatformPanel')
+    const cancel = document.getElementById('btnCancelAddPlatform')
+    const form = document.getElementById('addPlatformForm')
 
-{% endblock %}
+    if (btn && panel) {
+      btn.addEventListener('click', () => {
+        panel.style.display =
+          panel.style.display === 'none' || !panel.style.display ? 'block' : 'none'
+        if (panel.style.display === 'block') {
+          const inp = panel.querySelector('input[name="platform_name"]')
+          if (inp) inp.focus()
+        }
+      })
+    }
+    if (cancel && panel) {
+      cancel.addEventListener('click', () => (panel.style.display = 'none'))
+    }
+
+    // ✅ 不跳转：用 fetch 提交
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault()
+
+        const submitBtn = form.querySelector('button[type="submit"]')
+        if (submitBtn) {
+          submitBtn.disabled = true
+          submitBtn.textContent = '提交中...'
+        }
+
+        try {
+          const resp = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          })
+
+          if (!resp.ok) {
+            const text = await resp.text()
+            alert('新增失败：' + (text || resp.status))
+            return
+          }
+
+          // ✅ 成功：关闭面板 + 刷新当前页（仍停留在公司详情页）
+          if (panel) panel.style.display = 'none'
+          form.reset()
+          location.reload()
+        } catch (err) {
+          alert('新增失败：网络错误')
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false
+            submitBtn.textContent = '新增平台'
+          }
+        }
+      })
+    }
+  })()
+</script>{% endblock %}

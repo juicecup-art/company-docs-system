@@ -121,7 +121,7 @@
 
           <div class="field">
             {% set cur_aid = ticket.assignee_user_id %}
-            <label>负责人 (Owner) <span style="color:#ef4444">*</span></label>
+            <label>负责人<span style="color:#ef4444">*</span></label>
             <select class="sel" name="assignee_user_id" required>
               <option value="" disabled {% if not cur_aid %}selected{% endif %}>-- 请选择负责人 --</option>
               {% for u in (assignees or []) %}
@@ -174,8 +174,15 @@
 
         <div class="grid-2">
           <div class="field">
-            <label>截止日期</label>
-            <input class="inp" type="datetime-local" name="due_at" value="{{ ticket.due_at or '' }}">
+            <label>截止时间</label>
+            <input
+              type="text"
+              name="due_at"
+              placeholder="YYYY-MM-DD HH:MM"
+              pattern="\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}"
+              title="格式：YYYY-MM-DD HH:MM，例如 2026-02-28 18:58"
+              value="{{ ticket.due_at or '' }}"
+            />
           </div>
           <div class="field">
             <label>工单标题 <span style="color:#ef4444">*</span></label>

@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% block title %}管理员 / 用户{% endblock %}
-{% block crumb %}Admin / User{% endblock %}
-
+{% block title %}斯本贸易 - 编辑用户{% endblock %}
+{% block crumb %}用户管理 / 编辑用户{% endblock %}
+{% import "_ui_macros.html" as ui %}
 {% block content %}
 <div class="page">
-
   <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px;">
     <div>
       <h2 style="margin:0;">
@@ -15,7 +14,7 @@
       </div>
     </div>
     <div>
-      <a class="btn" href="/ui/admin/users" style="text-decoration:none; white-space:nowrap;">返回列表</a>
+      {{ ui.back('/ui/admin/users', '用户列表') }}
     </div>
   </div>
 

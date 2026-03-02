@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}上传 - 斯本贸易{% endblock %}
-{% block crumb %}Upload{% endblock %}
-
+{% block title %}斯本贸易 - 上传文档{% endblock %}
+{% block crumb %}上传文档{% endblock %}
+{% import "_ui_macros.html" as ui %}
 {% block content %}
 <style>
   /* ===== 统一文字等级（深->浅） ===== */
@@ -162,7 +162,7 @@
       <div class="head-desc">请选择公司并上传文件；“类别”仅区分原件/翻译件；“文件类型”用于业务归类。</div>
     </div>
     <div class="head-actions">
-      <a class="back" href="/ui/documents">← 返回文档列表</a>
+      {{ ui.back('/ui/documents', '返回文档列表') }}
     </div>
   </div>
 

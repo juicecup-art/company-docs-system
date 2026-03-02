@@ -62,14 +62,11 @@ def _can_read_ticket(user: dict, t: dict) -> bool:
     return False
 
 def _can_write_ticket(user: dict, t: dict) -> bool:
+    """仅 admin / 创建人 可写（编辑/删除/改状态等写操作）"""
     if _is_admin(user):
         return True
     uid = int(user["id"])
-    if int(t.get("requester_user_id") or 0) == uid:
-        return True
-    if t.get("assignee_user_id") and int(t["assignee_user_id"]) == uid:
-        return True
-    return False
+    return int(t.get("requester_user_id") or 0) == uid
 # -------------------------
 # 状态机（你截图那 5 个按钮就是这里决定能不能点）
 # -------------------------

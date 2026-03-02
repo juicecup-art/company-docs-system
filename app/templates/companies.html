@@ -1,5 +1,5 @@
-{% extends "base.html" %} {% block title %}公司管理 - 斯本贸易{% endblock %} {%
-block crumb %}Companies / List{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}斯本贸易 - 公司管理{% endblock %} {%
+block crumb %}公司管理{% endblock %} {% block content %}
 
 <style>
   .page-head {
@@ -105,7 +105,36 @@ block crumb %}Companies / List{% endblock %} {% block content %}
   <div class="page-head">
     <h2 style="margin: 0">公司管理</h2>
     <span style="flex: 1"></span>
+    <form
+      method="get"
+      action="/ui/companies"
+      style="display: flex; gap: 8px; align-items: center"
+    >
+      <input
+        type="text"
+        name="q"
+        value="{{ (q.q if q and q.q is defined else '') }}"
+        placeholder="搜索：公司编号 / 公司名称 / 法人"
+        style="
+          width: 340px;
+          padding: 8px 10px;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          outline: none;
+          font-size: 13px;
+        "
+      />
+      <button class="btn" type="submit">🔍 搜索</button>
 
+      {% if q and q.q %}
+      <a
+        class="btn btn-danger"
+        href="/ui/companies"
+        style="text-decoration: none"
+        >清空</a
+      >
+      {% endif %}
+    </form>
     {% if current_user and current_user.role == "admin" %}
     <button class="btn btn-danger" id="btnBulkDelete" type="button">
       🗑️ 批量删除

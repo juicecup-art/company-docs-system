@@ -56,9 +56,141 @@ STATUS_NEXT = {
     "SOLVED": ["CLOSED", "PROCESSING"],
     "CLOSED": [],
 }
-
 # =========================================================
-# Auth / ctx helpers
+# ✅ Feishu notify helpers（统一封装）
+# =========================================================
+def _user_label(u: Dict[str, Any] | None) -> str:
+    if not u:
+        return "-"
+    return (u.get("display_name") or u.get("username") or "-").strip()
+
+def _status_zh(st: str) -> str:
+    st = (st or "").strip().upper()
+    return STATUS_LABELS_ZH.get(st, st or "-")
+
+def _get_ticket_brief(ticket_id: int) -> Dict[str, Any]:
+    """
+    返回：title / status / assignee_user_id / assignee_name / requester_name
+    """
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("""
+                SELECT
+                    t.id,
+                    t.title,
+                    t.status,
+                    t.assignee_user_id,
+                    COALESCE(u2.display_name, u2.username) AS assignee_name,
+                    COALESCE(u1.display_name, u1.username) AS requester_name
+                FROM tickets t
+                LEFT JOIN users u1 ON u1.id = t.requester_user_id
+                LEFT JOIN users u2 ON u2.id = t.assignee_user_id
+                WHERE t.id=:id
+                LIMIT 1
+            """),
+            {"id": int(ticket_id)},
+        ).mappings().first()
+
+    if not row:
+        return {
+            "title": f"Ticket#{ticket_id}",
+            "status": "",
+            "assignee_user_id": None,
+            "assignee_name": "-",
+            "requester_name": "-",
+        }
+
+    d = dict(row)
+    d["title"] = (d.get("title") or "").strip() or f"Ticket#{ticket_id}"
+    return d
+
+def _notify_feishu(msg_text: str) -> None:
+    try:
+        from app.services.feishu_notify import send_feishu_text_sync
+        send_feishu_text_sync(msg_text)
+    except Exception as e:
+        print("feishu notify failed:", repr(e))
+
+def notify_ticket_created(ticket_id: int, actor_id: int) -> None:
+    from app.services.feishu_notify import make_ticket_url
+    brief = _get_ticket_brief(ticket_id)
+    actor = _get_user_by_id(actor_id)
+
+    msg_text = (
+        f"🆕 新工单｜{brief['title']}\n"
+        f"状态：{_status_zh(brief.get('status'))}\n"
+        f"负责人：{brief.get('assignee_name') or '-'}\n"
+        f"创建人：{brief.get('requester_name') or '-'}\n"
+        f"操作人：{_user_label(actor)}\n"
+        f"链接：{make_ticket_url(ticket_id)}"
+    )
+    _notify_feishu(msg_text)
+
+def notify_ticket_assigned(ticket_id: int, actor_id: int, assignee_ids: List[int]) -> None:
+    from app.services.feishu_notify import make_ticket_url
+    brief = _get_ticket_brief(ticket_id)
+    actor = _get_user_by_id(actor_id)
+
+    names: List[str] = []
+    for uid in assignee_ids or []:
+        u = _get_user_by_id(int(uid))
+        nm = _user_label(u)
+        if nm and nm != "-":
+            names.append(nm)
+    names_s = "、".join(names) if names else "-"
+
+    msg_text = (
+        f"👤 指派变更｜{brief['title']}\n"
+        f"状态：{_status_zh(brief.get('status'))}\n"
+        f"新负责人：{names_s}\n"
+        f"操作人：{_user_label(actor)}\n"
+        f"链接：{make_ticket_url(ticket_id)}"
+    )
+    _notify_feishu(msg_text)
+
+def notify_ticket_status_changed(ticket_id: int, actor_id: int, from_status: str, to_status: str) -> None:
+    from app.services.feishu_notify import make_ticket_url
+    brief = _get_ticket_brief(ticket_id)
+    actor = _get_user_by_id(actor_id)
+
+    msg_text = (
+        f"🔁 状态变更｜{brief['title']}\n"
+        f"状态：{_status_zh(from_status)} → {_status_zh(to_status)}\n"
+        f"负责人：{brief.get('assignee_name') or '-'}\n"
+        f"操作人：{_user_label(actor)}\n"
+        f"链接：{make_ticket_url(ticket_id)}"
+    )
+    _notify_feishu(msg_text)
+
+def notify_ticket_progress_added(
+    ticket_id: int,
+    actor_id: int,
+    content: str,
+    attachment_count: int,
+    old_status: str,
+    new_status: str,
+) -> None:
+    from app.services.feishu_notify import make_ticket_url
+    brief = _get_ticket_brief(ticket_id)
+    actor = _get_user_by_id(actor_id)
+
+    content_s = (content or "").strip()[:200]
+
+    status_line = ""
+    if (new_status or "").strip() and (new_status or "").upper() != (old_status or "").upper():
+        status_line = f"状态：{_status_zh(old_status)} → {_status_zh(new_status)}\n"
+
+    msg_text = (
+        f"📝 进度更新｜{brief['title']}\n"
+        f"{status_line}"
+        f"内容：{content_s}\n"
+        f"附件数：{int(attachment_count or 0)}\n"
+        f"负责人：{brief.get('assignee_name') or '-'}\n"
+        f"操作人：{_user_label(actor)}\n"
+        f"链接：{make_ticket_url(ticket_id)}"
+    )
+    _notify_feishu(msg_text)
+
 # =========================================================
 def _is_admin(user: Dict[str, Any] | None) -> bool:
     return bool(user) and user.get("role") == "admin"
@@ -218,7 +350,20 @@ def _can_manage_ticket(current_user: Dict[str, Any], ticket_row: Dict[str, Any])
         return True
     uid = int(current_user["id"])
     return int(ticket_row.get("assignee_user_id") or 0) == uid
+def _can_edit_ticket(current_user: Dict[str, Any], ticket_row: Dict[str, Any]) -> bool:
+    """仅 admin 或 创建人 可以编辑"""
+    if _is_admin(current_user):
+        return True
+    uid = int(current_user["id"])
+    return int(ticket_row.get("requester_user_id") or 0) == uid
 
+
+def _can_delete_ticket(current_user: Dict[str, Any], ticket_row: Dict[str, Any]) -> bool:
+    """仅 admin 或 创建人 可以删除"""
+    if _is_admin(current_user):
+        return True
+    uid = int(current_user["id"])
+    return int(ticket_row.get("requester_user_id") or 0) == uid
 # =========================================================
 # WHERE builder (list + count reuse)
 # =========================================================
@@ -647,23 +792,26 @@ def ui_ticket_create(
 
     st0 = "WAITING"
 
+
+    new_id = 0  # ✅ 先占位，避免作用域问题
+
     with engine.begin() as conn:
         conn.execute(
             text("""
                 INSERT INTO tickets
                 (ticket_no, company_id, company_name, platform_name, group_name,
-                 title, description, remark,
-                 category, priority, status,
-                 requester_user_id, assignee_user_id,
-                 due_at, resolved_at, closed_at,
-                 is_deleted, deleted_at, created_at, updated_at)
+                title, description, remark,
+                category, priority, status,
+                requester_user_id, assignee_user_id,
+                due_at, resolved_at, closed_at,
+                is_deleted, deleted_at, created_at, updated_at)
                 VALUES
                 ('TEMP', :company_id, :company_name, :platform_name, :group_name,
-                 :title, :description, :remark,
-                 :category, :priority, :status,
-                 :requester_user_id, :assignee_user_id,
-                 :due_at, NULL, NULL,
-                 0, NULL, NOW(), NOW())
+                :title, :description, :remark,
+                :category, :priority, :status,
+                :requester_user_id, :assignee_user_id,
+                :due_at, NULL, NULL,
+                0, NULL, NOW(), NOW())
             """),
             {
                 "company_id": cid,
@@ -676,7 +824,6 @@ def ui_ticket_create(
                 "category": category_val,
                 "priority": pr,
                 "status": st0,
-                "group_name": group_val or None,
                 "requester_user_id": int(current_user["id"]),
                 "assignee_user_id": assignee_id,
                 "due_at": due,
@@ -688,7 +835,10 @@ def ui_ticket_create(
             return RedirectResponse("/ui/tickets/new", status_code=302)
 
         ticket_no = _make_ticket_no_by_id(new_id)
-        conn.execute(text("UPDATE tickets SET ticket_no=:no WHERE id=:id LIMIT 1"), {"no": ticket_no, "id": new_id})
+        conn.execute(
+            text("UPDATE tickets SET ticket_no=:no WHERE id=:id LIMIT 1"),
+            {"no": ticket_no, "id": new_id},
+        )
 
         conn.execute(
             text("""
@@ -696,12 +846,13 @@ def ui_ticket_create(
                 (ticket_id, actor_user_id, event_type, from_status, to_status, payload_json, created_at)
                 VALUES
                 (:tid, :uid, 'created', NULL, 'NEW',
-                 JSON_OBJECT('company_id', :cid, 'company_name', :cname, 'category', :cat),
-                 NOW())
+                JSON_OBJECT('company_id', :cid, 'company_name', :cname, 'category', :cat),
+                NOW())
             """),
             {"tid": new_id, "uid": int(current_user["id"]), "cid": cid, "cname": cname, "cat": category_val},
         )
 
+        # 保存附件...（你原来的 _save_one 逻辑保持不动）
         base_dir = os.path.join("uploads", "tickets", str(new_id))
         files_dir = os.path.join(base_dir, "files")
         imgs_dir = os.path.join(base_dir, "images")
@@ -723,9 +874,9 @@ def ui_ticket_create(
             conn.execute(
                 text("""
                     INSERT INTO ticket_attachments
-                      (ticket_id, kind, original_name, stored_path, mime_type, size_bytes, uploaded_by, created_at)
+                    (ticket_id, kind, original_name, stored_path, mime_type, size_bytes, uploaded_by, created_at)
                     VALUES
-                      (:tid, :kind, :oname, :spath, :mime, :sz, :uid, NOW())
+                    (:tid, :kind, :oname, :spath, :mime, :sz, :uid, NOW())
                 """),
                 {
                     "tid": new_id,
@@ -743,8 +894,9 @@ def ui_ticket_create(
         for f in images or []:
             _save_one(f, "image")
 
+    # ✅ 事务结束后再通知（通知失败不影响创建）
+    notify_ticket_created(new_id, int(current_user["id"]))
     return RedirectResponse(url=f"/ui/tickets/{new_id}", status_code=302)
-
 # =========================================================
 # 4) Detail
 # =========================================================
@@ -791,6 +943,12 @@ def ui_ticket_detail(request: Request, ticket_id: int):
                 status_code=403,
             )
 
+        # ✅ 一定要在这里定义（确保后面必然存在）
+        can_manage = _can_manage_ticket(current_user, ticket_dict)
+        can_edit   = _can_edit_ticket(current_user, ticket_dict)
+        can_delete = _can_delete_ticket(current_user, ticket_dict)
+        can_operate = _can_operate_ticket(current_user, ticket_id, ticket_dict)  # 可选：用于指派/进度/状态
+        can_manage_attachments = can_manage  # ✅ 复用：附件管理 = can_manage（admin/主负责人）
         progress_rows = conn.execute(
             text("""
                 SELECT p.*,
@@ -895,6 +1053,11 @@ def ui_ticket_detail(request: Request, ticket_id: int):
             "progress_rows": progress_rows,
             "progress_attachments_map": progress_attachments_map,
             "STATUS_LABELS_ZH": STATUS_LABELS_ZH,
+            "can_manage": can_manage,
+            "can_edit": can_edit,
+            "can_delete": can_delete,
+            "can_manage_attachments": can_manage_attachments,
+             "can_operate": can_operate, 
         },
     )
 
@@ -998,6 +1161,7 @@ def ui_ticket_assign(
             {"tid": ticket_id, "uid": actor_id, "payload": json.dumps({"assigned_ids": new_ids}, ensure_ascii=False)},
         )
 
+    notify_ticket_assigned(ticket_id, actor_id, new_ids)
     return RedirectResponse(f"/ui/tickets/{ticket_id}", status_code=302)
 
 # =========================================================
@@ -1008,6 +1172,8 @@ def ui_ticket_change_status(request: Request, ticket_id: int, to_status: str = F
     current_user = _get_current_user_for_ui(request)
     if not current_user:
         return _redirect("/ui/login")
+
+    actor_id = int(current_user["id"])  # ✅ 放在 current_user 获取之后
 
     to_s = (to_status or "").strip().upper()
     if not to_s:
@@ -1026,7 +1192,13 @@ def ui_ticket_change_status(request: Request, ticket_id: int, to_status: str = F
         from_s = (t.get("status") or "").upper()
 
         if not _can_operate_ticket(current_user, ticket_id, t):
-            return _render_no_permission(request, current_user, "tickets", "你没有权限变更该工单状态（仅管理员/创建人/被指派人可操作）。", f"/ui/tickets/{ticket_id}")
+            return _render_no_permission(
+                request,
+                current_user,
+                "tickets",
+                "你没有权限变更该工单状态（仅管理员/创建人/被指派人可操作）。",
+                f"/ui/tickets/{ticket_id}",
+            )
 
         allowed = STATUS_NEXT.get(from_s, [])
         if to_s not in allowed:
@@ -1054,11 +1226,13 @@ def ui_ticket_change_status(request: Request, ticket_id: int, to_status: str = F
                  JSON_OBJECT('from', :from_s, 'to', :to_s),
                  NOW())
             """),
-            {"tid": ticket_id, "uid": int(current_user["id"]), "from_s": from_s, "to_s": to_s},
+            {"tid": ticket_id, "uid": actor_id, "from_s": from_s, "to_s": to_s},
         )
 
-    return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)
+    # ✅ 通知放事务外（失败不影响主流程）
+    notify_ticket_status_changed(ticket_id, actor_id, from_s, to_s)
 
+    return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)
 # =========================================================
 # 8) Batch
 # =========================================================
@@ -1263,8 +1437,12 @@ async def ui_ticket_upload(
         t = dict(t)
 
         if not _can_manage_ticket(current_user, t):
-            return _render_no_permission(request, current_user, "tickets", "你没有权限上传附件（仅主负责人/管理员可操作）。", f"/ui/tickets/{ticket_id}")
-
+            return _render_no_permission(
+                request, current_user, "tickets",
+                "你没有权限管理附件（仅主负责人/管理员可操作）。",
+                f"/ui/tickets/{ticket_id}"
+            )
+            
         base_dir = os.path.join("uploads", "tickets", str(ticket_id))
         files_dir = os.path.join(base_dir, "files")
         imgs_dir = os.path.join(base_dir, "images")
@@ -1413,8 +1591,11 @@ async def ui_ticket_attachment_replace(
         t = dict(t)
 
         if not _can_manage_ticket(current_user, t):
-            return _render_no_permission(request, current_user, "tickets", "你没有权限替换附件（仅主负责人/管理员可操作）。", f"/ui/tickets/{ticket_id}")
-
+            return _render_no_permission(
+                request, current_user, "tickets",
+                "你没有权限管理附件（仅主负责人/管理员可操作）。",
+                f"/ui/tickets/{ticket_id}"
+            )        
         a = conn.execute(
             text("SELECT id, kind, original_name, stored_path, mime_type FROM ticket_attachments WHERE id=:aid AND ticket_id=:tid LIMIT 1"),
             {"aid": attachment_id, "tid": ticket_id},
@@ -1505,9 +1686,12 @@ def ui_ticket_delete(request: Request, ticket_id: int):
             return _redirect("/ui/tickets")
         t = dict(t)
 
-        if not _can_manage_ticket(current_user, t):
-            return _render_no_permission(request, current_user, "tickets", "你没有权限删除工单（仅主负责人/管理员可操作）。", f"/ui/tickets/{ticket_id}")
-
+        if not _can_delete_ticket(current_user, t):
+            return _render_no_permission(
+                request, current_user, "tickets",
+                "你没有权限删除工单（仅管理员/创建人可操作）。",
+                f"/ui/tickets/{ticket_id}"
+            )
         conn.execute(
             text("UPDATE tickets SET is_deleted=1, deleted_at=NOW(), updated_at=NOW() WHERE id=:id LIMIT 1"),
             {"id": ticket_id},
@@ -1550,9 +1734,12 @@ def ui_ticket_edit(request: Request, ticket_id: int):
             return templates.TemplateResponse("not_found.html", {**_base_ctx(request, current_user, "tickets")}, status_code=200)
 
         ticket_dict = dict(ticket)
-        if not _can_operate_ticket(current_user, ticket_id, ticket_dict):
-            return _render_no_permission(request, current_user, "tickets", "你没有权限修改该工单。", f"/ui/tickets/{ticket_id}")
-
+        if not _can_edit_ticket(current_user, ticket_dict):
+            return _render_no_permission(
+                request, current_user, "tickets",
+                "你没有权限编辑该工单（仅管理员/创建人可操作）。",
+                f"/ui/tickets/{ticket_id}"
+            )
     assignees = _list_active_users_for_assign()
     companies: List[Dict[str, Any]] = []
     try:
@@ -1616,15 +1803,12 @@ def ui_ticket_edit_post(
 
         t = dict(t)
 
-        if not _can_operate_ticket(current_user, ticket_id, t):
+        if not _can_edit_ticket(current_user, t):
             return _render_no_permission(
-                request,
-                current_user,
-                "tickets",
-                "你没有权限修改该工单。",
+                request, current_user, "tickets",
+                "你没有权限编辑该工单（仅管理员/创建人可操作）。",
                 f"/ui/tickets/{ticket_id}"
             )
-
         conn.execute(
             text("""
                 UPDATE tickets SET
@@ -1777,6 +1961,14 @@ async def ui_ticket_add_progress(
             {"tid": ticket_id, "uid": int(current_user["id"]), "from_s": old_s or None, "to_s": to_s or None, "cnt": len(attachment_ids)},
         )
 
+    notify_ticket_progress_added(
+        ticket_id=ticket_id,
+        actor_id=int(current_user["id"]),
+        content=content_s,
+        attachment_count=len(attachment_ids),
+        old_status=old_s,
+        new_status=to_s,
+    )
     return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)
 
 @router.post("/{ticket_id}/progress/{progress_id}/delete")
@@ -1811,3 +2003,4 @@ def ui_ticket_delete_progress(request: Request, ticket_id: int, progress_id: int
         )
 
     return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)
+

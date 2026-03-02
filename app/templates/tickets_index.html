@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 
 {% block title %}工单中心 - 高效协作{% endblock %}
-{% block crumb %}工单管理 / 列表{% endblock %}
+{% block crumb %}工单{% endblock %}
 
 {% block content %}
 <style>
@@ -192,6 +192,12 @@
   .st-processing{ background:#f0f9ff; color:#0284c7; border-color:#e0f2fe; }
   .st-solved{ background:#f0fdf4; color:#16a34a; border-color:#dcfce7; }
   .st-closed{ background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }
+  /* ✅ 当前状态统一淡蓝色 */
+.st-softblue{
+  background:#eff6ff;
+  color:#2563eb;
+  border-color:#dbeafe;
+}
 </style>
 
 <div class="tix-header">
@@ -287,9 +293,9 @@
       <tr>
         <th style="width:130px;">工单编号</th>
         <th>详细内容</th>
-        <th style="width:120px;">当前状态</th>
         <th style="width:120px;">优先级</th>
         <th style="width:140px;">任务类型</th>
+        <th style="width:120px;">当前状态</th>
         <th style="width:160px;">负责人</th>
         <th style="width:180px;">更新时间</th>
       </tr>
@@ -323,21 +329,8 @@
               </div>
             </td>
 
-            <!-- ✅ 当前状态：不需要颜色 -->
-            {% set st_map = {
-                'UNRECEIVED': {'label': '未接收', 'cls': 'st-unreceived'},
-                'WAITING': {'label': '等待中', 'cls': 'st-waiting'},
-                'PROCESSING': {'label': '处理中', 'cls': 'st-processing'},
-                'SOLVED': {'label': '已解决', 'cls': 'st-solved'},
-                'CLOSED': {'label': '已关闭', 'cls': 'st-closed'}
-              } %}
-              
-              <td>
-                {% set st = (t.status or 'WAITING')|upper %}
-                {% set st_info = st_map.get(st, st_map['WAITING']) %}
-                <span class="t-pill {{ st_info.cls }}">{{ st_info.label }}</span>
-              </td>
-              <td>
+            {# ✅ 优先级（放在详细内容后面） #}
+            <td>
               {% set pr = (t.priority or 'NORMAL')|upper %}
               {% if pr=='URGENT' %}
                 <span class="prio-pill prio-urgent">紧急</span>
@@ -347,8 +340,8 @@
                 <span class="prio-pill prio-normal">一般</span>
               {% endif %}
             </td>
-
-            <!-- ✅ 任务类型（紧挨优先级） -->
+            
+            {# ✅ 任务类型（在优先级后面） #}
             <td>
               {% if t.category %}
                 <span class="tag" style="background:#f1f5f9; color:#475569; border-color:#e2e8f0;">
@@ -358,7 +351,14 @@
                 <span style="color:#94a3b8;">-</span>
               {% endif %}
             </td>
-
+            
+            {# ✅ 当前状态（统一淡蓝色，不再按状态变色） #}
+            <td>
+              {% set st = (t.status or 'WAITING')|upper %}
+              <span class="t-pill st-softblue">
+                {{ st_label_map.get(st, st) }}
+              </span>
+            </td>
             <td>
               <div class="avatar-info">
                 <div class="avatar-circle">

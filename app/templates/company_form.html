@@ -1,7 +1,7 @@
 {% extends "base.html" %} 
 {% block title %}{% if mode=='edit' %}编辑公司{% else %}新建公司{% endif %} - 斯本贸易{% endblock %} 
 {% block crumb %}Companies / {% if mode=='edit' %}Edit{% else %}New{% endif %}{% endblock %} 
-{% block content %}
+{% block content %}{% import "_ui_macros.html" as ui %}
 
 <style>
   /* 保持现有风格 */
@@ -166,7 +166,7 @@
       <h2>{% if mode=='edit' %}编辑公司{% else %}新建公司{% endif %}</h2>
     </div>
     <span class="head-spacer"></span>
-    <a class="back" href="/ui/companies">返回列表</a>
+    {{ ui.back('/ui/companies', '返回列表') }}
   </div>
 
   <p class="hint2" style="margin: 0 0 8px 0">

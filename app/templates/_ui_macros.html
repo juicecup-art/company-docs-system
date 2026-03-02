@@ -1,0 +1,15 @@
+{% macro back(href, text='返回列表', variant='default') %}
+<a class="btn btn-secondary back-{{ variant }}" href="{{ href }}">
+  <svg
+    width="18"
+    height="18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+  >
+    <path d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+  </svg>
+  {{ text }}
+</a>
+{% endmacro %}

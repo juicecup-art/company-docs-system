@@ -1,3 +1,4 @@
+{% import "_ui_macros.html" as ui %}
 <!doctype html>
 <html lang="zh-CN">
 <head>
@@ -7,7 +8,7 @@
 <body>
   <h1>新建工单</h1>
 
-  <div><a href="/ui/tickets">← 返回列表</a></div>
+  <div>{{ ui.back('/ui/tickets', '工单中心') }}</div>
 
   <hr/>
 

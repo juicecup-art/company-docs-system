@@ -1564,7 +1564,16 @@ def _select_companies_sql_for_user(
               COALESCE(company_domain,'') LIKE :q OR
               COALESCE(company_status,'') LIKE :q OR
               LOWER(COALESCE(TRIM(company_code),'')) = :q_code_exact OR
-              LOWER(COALESCE(TRIM(company_code),'')) LIKE :q_code_like
+              LOWER(COALESCE(TRIM(company_code),'')) LIKE :q_code_like OR
+              EXISTS (
+                SELECT 1
+                FROM company_legal_persons clp
+                JOIN legal_persons lp ON lp.id = clp.legal_person_id
+                WHERE clp.company_id = companies.id
+                    AND lp.deleted_at IS NULL
+                    AND COALESCE(lp.full_name,'') LIKE :q
+                LIMIT 1
+          )
             )
             """
         )
@@ -1821,7 +1830,7 @@ async def ui_company_detail(request: Request, company_id: int):
             ),
             {"cid": company_id},
         ).mappings().all()
-
+        
         # 6) 法人绑定（展示）
         legal_persons = conn.execute(
             text(
@@ -2756,61 +2765,69 @@ async def ui_company_platforms(request: Request, company_id: int):
 
 
 @router.post("/companies/{company_id}/platforms/add")
-async def ui_company_platform_add(
-    request: Request,
-    company_id: int,
-    platform_name: str = Form(...),
-    store_url: str = Form(""),
-    domain: str = Form(""),
-):
-    """新增平台（需要 company.edit）"""
+async def ui_company_platform_add(request: Request, company_id: int,
+                                  platform_name: str = Form(...),
+                                  store_url: str = Form(""),
+                                  domain: str = Form("")):
     current_user = _get_current_user_for_ui(request)
     if not current_user:
         return _redirect("/ui/login")
 
     if not _has_company_perm(current_user, company_id, need="edit"):
         return _render_no_permission(
-            request,
-            current_user,
-            active="companies",
+            request, current_user, active="companies",
             message="你没有权限新增平台（需要“编辑”权限）。",
             back_url=f"/ui/companies/{company_id}/platforms",
         )
 
     platform_name = (platform_name or "").strip()
-    store_url = (store_url or "").strip()
-    domain = (domain or "").strip()
+    store_url = (store_url or "").strip() or None
+    domain = (domain or "").strip() or None
 
-    if platform_name == "":
+    if not platform_name:
         return RedirectResponse(url=f"/ui/companies/{company_id}/platforms", status_code=302)
 
-    with engine.begin() as conn:
-        exists = conn.execute(
-            text("SELECT id FROM companies WHERE id=:id LIMIT 1"),
-            {"id": company_id},
-        ).scalar()
-        if not exists:
-            raise HTTPException(status_code=404, detail="Company not found")
+    # 规范化（可选，但强烈建议：避免 OBI / obi / OBI 这种混乱）
+    platform_key = platform_name.strip()
 
-        conn.execute(
-            text(
-                """
-                INSERT INTO company_platforms
-                    (company_id, platform_name, store_url, domain, created_at)
-                VALUES
-                    (:company_id, :platform_name, :store_url, :domain, NOW())
-                """
-            ),
-            {
-                "company_id": company_id,
-                "platform_name": platform_name,
-                "store_url": store_url if store_url else None,
-                "domain": domain if domain else None,
-            },
-        )
+    with engine.begin() as conn:
+        # 先查是否已存在
+        exists = conn.execute(
+            text("""
+                SELECT id
+                FROM company_platforms
+                WHERE company_id=:cid AND platform_name=:pname
+                LIMIT 1
+            """),
+            {"cid": company_id, "pname": platform_key},
+        ).first()
+
+        if exists:
+            # 你现在平台列表页是 GET /companies/{id}/platforms
+            # 最简单：用 querystring 回显提示（模板里你可以显示 msg）
+            return RedirectResponse(
+                url=f"/ui/companies/{company_id}/platforms?msg=平台已存在",
+                status_code=302,
+            )
+
+        try:
+            conn.execute(
+                text("""
+                    INSERT INTO company_platforms
+                        (company_id, platform_name, store_url, domain, created_at)
+                    VALUES
+                        (:cid, :pname, :store_url, :domain, NOW())
+                """),
+                {"cid": company_id, "pname": platform_key, "store_url": store_url, "domain": domain},
+            )
+        except IntegrityError:
+            # 并发情况下两个人同时点，仍可能撞唯一键，这里兜底
+            return RedirectResponse(
+                url=f"/ui/companies/{company_id}/platforms?msg=平台已存在",
+                status_code=302,
+            )
 
     return RedirectResponse(url=f"/ui/companies/{company_id}/platforms", status_code=302)
-
 
 @router.post("/companies/{company_id}/platforms/{platform_id}/delete")
 async def ui_company_platform_delete(request: Request, company_id: int, platform_id: int):
@@ -2904,34 +2921,65 @@ def ui_platforms(request: Request):
 
     uid = int(current_user["id"])
 
-    # SQL: 按平台名分组，统计关联公司数、记录数、最近更新时间
-    # 逻辑：只统计当前用户有权限查看的公司
-    sql = text("""
-        SELECT 
-            LOWER(TRIM(cp.platform_name)) as platform_key, -- 转小写用于匹配
-            cp.platform_name,
-            COUNT(DISTINCT cp.company_id) as company_cnt,
-            COUNT(1) as row_cnt,
-            MAX(COALESCE(cp.updated_at, cp.created_at)) as last_updated
-        FROM company_platforms cp
-        JOIN companies c ON c.id = cp.company_id AND c.deleted_at IS NULL
-        JOIN user_company_permissions ucp ON ucp.company_id = c.id
-        WHERE ucp.user_id = :uid AND ucp.can_view = 1
-        GROUP BY LOWER(TRIM(cp.platform_name)), cp.platform_name
-    """)
+    if _is_admin(current_user):
+        sql = text("""
+            SELECT
+                LOWER(TRIM(cp.platform_name)) AS platform_key,
+                MIN(cp.platform_name) AS platform_name,
+                COUNT(DISTINCT cp.company_id) AS company_cnt,
+                COUNT(*) AS row_cnt,
+                MAX(COALESCE(cp.updated_at, cp.created_at)) AS last_updated
+            FROM company_platforms cp
+            JOIN companies c
+              ON c.id = cp.company_id
+             AND c.deleted_at IS NULL
+            GROUP BY LOWER(TRIM(cp.platform_name))
+            ORDER BY last_updated DESC
+        """)
+        params = {}
+    else:
+        sql = text("""
+            SELECT
+                LOWER(TRIM(cp.platform_name)) AS platform_key,
+                MIN(cp.platform_name) AS platform_name,
+                COUNT(DISTINCT cp.company_id) AS company_cnt,
+                COUNT(*) AS row_cnt,
+                MAX(COALESCE(cp.updated_at, cp.created_at)) AS last_updated
+            FROM company_platforms cp
+            JOIN companies c
+              ON c.id = cp.company_id
+             AND c.deleted_at IS NULL
+            JOIN user_company_permissions ucp
+              ON ucp.company_id = c.id
+             AND ucp.user_id = :uid
+             AND (ucp.can_view=1 OR ucp.can_edit=1 OR ucp.can_docs=1)
+            GROUP BY LOWER(TRIM(cp.platform_name))
+            ORDER BY last_updated DESC
+        """)
+        params = {"uid": uid}
 
     with engine.connect() as conn:
-        rows = conn.execute(sql, {"uid": uid}).mappings().all()
+        rows = conn.execute(sql, params).mappings().all()
 
-    # 将 DB 结果转换为字典，方便前端通过 key 查找
-    # 结构: {'amazon': {'company_cnt': 10, 'last_updated':...}, 'temu': ...}
-    db_stats = {r['platform_key']: dict(r) for r in rows}
+    db_stats = {r["platform_key"]: dict(r) for r in rows}
+
+    payment_list = [
+        {"name": "Skyee", "db_key": "skyee", "link": '<a href="https://www.skyee360.com/invite?aff=LUVIP" target="_blank">Skyee注册链接</a>'},
+        {"name": "Payoneer (P卡)", "db_key": "payoneer", "link": '公司注册找经理<br />法人：<a href="https://paynr.co/4qbAuHq" target="_blank">注册</a> | <a href="https://login.payoneer.com/" target="_blank">登录</a>'},
+        {"name": "WorldFirst (万里汇)", "db_key": "worldfirst", "link": '<a href="https://portal.worldfirst.com/register?region=NL&default_source=SA175" target="_blank">注册 (SA175)</a>'},
+        {"name": "Pingpong", "db_key": "pingpong", "link": '<a href="https://business.pingpongx.com/entrance/signup?inviteCode=ZZzhangxj" target="_blank">注册 (ZZzhangxj)</a>'},
+        {"name": "Airwallex (空中云汇)", "db_key": "airwallex", "link": '<a href="https://www.airwallex.com/app/signup?so=XKzzKwoFztHNk82F--HR002506" target="_blank">注册</a> | <a href="https://www.airwallex.com/app/login" target="_blank">登录</a>'},
+        {"name": "XGD (paykka)", "db_key": "paykka", "link": '<a href="https://client.eu.paykka.com/login" target="_blank">登录</a>'},
+        {"name": "Wise", "db_key": "wise", "link": '<a href="https://wise.com" target="_blank">官网</a>'},
+        {"name": "Qonto", "db_key": "qonto", "link": "Qonto"},
+    ]
 
     return templates.TemplateResponse(
         "platforms_index.html",
         {
             **_base_ctx(request, current_user, "platforms"),
             "db_stats": db_stats, # 传字典给前端
+            "payment_list": payment_list,
         },
     )
 
@@ -2946,39 +2994,56 @@ def ui_platform_detail(request: Request, platform_name: str):
         return _redirect("/ui/login")
 
     uid = int(current_user["id"])
-    p_name = (platform_name or "").strip()
+    p_key = (platform_name or "").strip().lower()
 
-    # SQL: 查询指定平台下的所有公司记录
-    sql = text("""
-        SELECT 
-            cp.id as cp_id,
-            cp.company_id,
-            c.company_name,
-            COALESCE(NULLIF(TRIM(UPPER(c.country)), ''), 'OTHER') AS country,
-            cp.store_url,
-            cp.domain,
-            cp.status,
-            cp.progress,
-            cp.updated_at
-        FROM company_platforms cp
-        JOIN companies c ON c.id = cp.company_id AND c.deleted_at IS NULL
-        JOIN user_company_permissions ucp ON ucp.company_id = c.id
-        WHERE ucp.user_id = :uid AND ucp.can_view = 1
-          AND cp.platform_name = :pname
-        ORDER BY cp.updated_at DESC
-    """)
+    if _is_admin(current_user):
+        sql = text("""
+            SELECT
+                cp.id as cp_id,
+                cp.company_id,
+                c.company_name,
+                COALESCE(NULLIF(TRIM(UPPER(c.country)), ''), 'OTHER') AS country,
+                cp.store_url,
+                cp.domain,
+                cp.status,
+                cp.progress,
+                cp.updated_at
+            FROM company_platforms cp
+            JOIN companies c ON c.id = cp.company_id AND c.deleted_at IS NULL
+            WHERE LOWER(TRIM(cp.platform_name)) = :pkey
+            ORDER BY cp.updated_at DESC
+        """)
+        params = {"pkey": p_key}
+    else:
+        sql = text("""
+            SELECT
+                cp.id as cp_id,
+                cp.company_id,
+                c.company_name,
+                COALESCE(NULLIF(TRIM(UPPER(c.country)), ''), 'OTHER') AS country,
+                cp.store_url,
+                cp.domain,
+                cp.status,
+                cp.progress,
+                cp.updated_at
+            FROM company_platforms cp
+            JOIN companies c ON c.id = cp.company_id AND c.deleted_at IS NULL
+            JOIN user_company_permissions ucp ON ucp.company_id = c.id
+             AND ucp.user_id = :uid
+             AND (ucp.can_view=1 OR ucp.can_edit=1 OR ucp.can_docs=1)
+            WHERE LOWER(TRIM(cp.platform_name)) = :pkey
+            ORDER BY cp.updated_at DESC
+        """)
+        params = {"uid": uid, "pkey": p_key}
 
     with engine.connect() as conn:
-        rows = conn.execute(sql, {"uid": uid, "pname": p_name}).mappings().all()
+        rows = conn.execute(sql, params).mappings().all()
 
     return templates.TemplateResponse(
         "platform_detail.html",
-        {
-            **_base_ctx(request, current_user, "platforms"),
-            "platform_name": p_name,
-            "rows": rows,
-        },
+        {**_base_ctx(request, current_user, "platforms"), "platform_name": platform_name, "rows": rows},
     )
+
 # =========================
 # 平台-公司详情
 # GET /ui/company-platforms/{cp_id}
@@ -2989,29 +3054,44 @@ def ui_platform_company_detail(request: Request, cp_id: int):
     if not current_user:
         return _redirect("/ui/login")
 
-    uid = int(current_user["id"])
-
-    # 只做一件事：校验此 cp_id 是否属于用户可查看的公司，并取 company_id
     with engine.connect() as conn:
-        row = conn.execute(
-            text("""
-                SELECT
-                  cp.id   AS platform_id,
-                  cp.company_id,
-                  cp.platform_name
-                FROM company_platforms cp
-                JOIN companies c
-                  ON c.id = cp.company_id
-                 AND c.deleted_at IS NULL
-                JOIN user_company_permissions ucp
-                  ON ucp.company_id = c.id
-                 AND ucp.user_id = :uid
-                 AND ucp.can_view = 1
-                WHERE cp.id = :cpid
-                LIMIT 1
-            """),
-            {"uid": uid, "cpid": cp_id},
-        ).mappings().first()
+        if _is_admin(current_user):
+            row = conn.execute(
+                text("""
+                    SELECT
+                      cp.id AS platform_id,
+                      cp.company_id,
+                      cp.platform_name
+                    FROM company_platforms cp
+                    JOIN companies c
+                      ON c.id = cp.company_id
+                     AND c.deleted_at IS NULL
+                    WHERE cp.id = :cpid
+                    LIMIT 1
+                """),
+                {"cpid": cp_id},
+            ).mappings().first()
+        else:
+            uid = int(current_user["id"])
+            row = conn.execute(
+                text("""
+                    SELECT
+                      cp.id AS platform_id,
+                      cp.company_id,
+                      cp.platform_name
+                    FROM company_platforms cp
+                    JOIN companies c
+                      ON c.id = cp.company_id
+                     AND c.deleted_at IS NULL
+                    JOIN user_company_permissions ucp
+                      ON ucp.company_id = c.id
+                     AND ucp.user_id = :uid
+                     AND (ucp.can_view = 1 OR ucp.can_edit = 1 OR ucp.can_docs = 1)
+                    WHERE cp.id = :cpid
+                    LIMIT 1
+                """),
+                {"uid": uid, "cpid": cp_id},
+            ).mappings().first()
 
     if not row:
         return templates.TemplateResponse(
@@ -3020,15 +3100,11 @@ def ui_platform_company_detail(request: Request, cp_id: int):
         )
 
     company_id = int(row["company_id"])
-    platform_id = int(row["platform_id"])  # == cp_id
-
-    # ✅ 直接跳转到你现成的“公司平台详情页”（共用那一套页面/权限/图片/绑定文档等）
-    # 你也可以加 ?from=platforms 让返回按钮回到平台聚合
+    platform_id = int(row["platform_id"])
     return RedirectResponse(
         url=f"/ui/companies/{company_id}/platforms/{platform_id}?from=platforms",
         status_code=302,
     )
-
 
 # =========================
 # 兼容旧路径（你浏览器以前点的那个）

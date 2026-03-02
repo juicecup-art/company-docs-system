@@ -85,6 +85,41 @@
   .btn-secondary:hover { background: #f1f5f9; }
   .btn-primary { background: var(--brand); color: #fff; border: none; }
   .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
+  .file-list{
+    margin:10px 0 0 0;
+    padding:0;
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-height:160px;
+    overflow:auto;
+  }
+  .file-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 8px;
+    border:1px solid rgba(15,23,42,.08);
+    border-radius:10px;
+    background:#fff;
+  }
+  .file-item .name{
+    flex:1;
+    min-width:0;
+    font-size:12px;
+    font-weight:700;
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .file-item .meta{
+    font-size:11px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+</style>
 </style>
 
 <div class="form-wrap">
@@ -210,14 +245,22 @@
                 <b>上传相关文档</b>
                 <span>支持拖拽或粘贴文件</span>
                 <div id="fileCountAtt" class="hint">未选择文件</div>
-                <input type="file" name="attachments" multiple class="file-input-hidden" id="fileInputAttachments" />
-              </div>
+                <ul id="fileListAtt" class="file-list"></ul>
+                <input
+                type="file"
+                name="attachments"
+                multiple
+                class="file-input-hidden"
+                id="fileInputAttachments"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.7z,.ppt,.pptx,.json"
+              /></div>
 
               <div class="upload-box images-box" id="dropzoneImages">
                 <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 <b>上传图片/截图</b>
                 <span>支持 Ctrl+V 直接粘贴</span>
                 <div id="fileCountImg" class="hint">未选择图片</div>
+                <ul id="fileListImg" class="file-list"></ul>
                 <input type="file" name="images" multiple accept="image/*" class="file-input-hidden" id="fileInputImages" />
               </div>
             </div>
@@ -247,64 +290,130 @@
 
 {% if mode != 'edit' %}
 <script>
-(function(){
-  function setupUpload(boxId, inputId, countId, acceptImagesOnly){
-    const box = document.getElementById(boxId);
-    const input = document.getElementById(inputId);
-    const countDisplay = document.getElementById(countId);
-
-    function updateDisplay() {
-      const count = input.files.length;
-      countDisplay.innerText = count > 0 ? `已选择 ${count} 个文件` : '未选择文件';
-      countDisplay.style.color = count > 0 ? 'var(--brand)' : 'var(--text-label)';
+  ;(function () {
+    const attInput = document.getElementById('fileInputAttachments')
+    const imgInput = document.getElementById('fileInputImages')
+    const attCount = document.getElementById('fileCountAtt')
+    const imgCount = document.getElementById('fileCountImg')
+    const attList  = document.getElementById('fileListAtt')
+    const imgList  = document.getElementById('fileListImg')
+    const dzAtt = document.getElementById('dropzoneFiles')
+    const dzImg = document.getElementById('dropzoneImages')
+  
+    function fmtSize(bytes){
+      if (!bytes && bytes !== 0) return ''
+      const units = ['B','KB','MB','GB']
+      let v = bytes, i = 0
+      while (v >= 1024 && i < units.length-1){ v /= 1024; i++ }
+      return (i === 0 ? v : v.toFixed(1)) + units[i]
     }
-
-    function addFiles(files){
-      const dt = new DataTransfer();
-      for (let f of input.files) dt.items.add(f);
-      for (let f of files){
-        if (acceptImagesOnly && !f.type.startsWith('image/')) continue;
-        dt.items.add(f);
+  
+    function uniqueFiles(files){
+      const seen = new Set()
+      const out = []
+      for (const f of files) {
+        const key = `${f.name}__${f.size}__${f.lastModified}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push(f)
       }
-      input.files = dt.files;
-      updateDisplay();
+      return out
     }
-
-    document.addEventListener('paste', (e)=>{
-      if(!e.clipboardData || !e.clipboardData.items) return;
-      const fs = [];
-      for(let it of e.clipboardData.items){
-        if(it.kind === 'file'){
-          const f = it.getAsFile();
-          if(f) fs.push(f);
+  
+    function renderList(inputEl, countEl, listEl, emptyText){
+      const files = Array.from(inputEl?.files || [])
+      if (countEl) countEl.textContent = files.length ? `已选择 ${files.length} 个` : emptyText
+      if (!listEl) return
+      listEl.innerHTML = ''
+      files.forEach(f => {
+        const li = document.createElement('li')
+        li.className = 'file-item'
+        li.innerHTML = `
+          <span class="name" title="${f.name.replace(/"/g,'&quot;')}">${f.name}</span>
+          <span class="meta">${fmtSize(f.size)}</span>
+        `
+        listEl.appendChild(li)
+      })
+    }
+  
+    // ✅ 按区域过滤
+    function filterByZone(files, zone){
+      const arr = Array.from(files || [])
+      if (zone === 'images') return arr.filter(f => (f.type || '').startsWith('image/'))
+      return arr.filter(f => !(f.type || '').startsWith('image/')) // attachments 排除图片
+    }
+  
+    // ✅ 合并 + 过滤 + 去重
+    function addFilesToInput(inputEl, zone, incomingFiles){
+      const current = Array.from(inputEl.files || [])
+      const incoming = filterByZone(incomingFiles, zone)
+      const merged = uniqueFiles([...current, ...incoming])
+  
+      const dt = new DataTransfer()
+      merged.forEach(f => dt.items.add(f))
+      inputEl.files = dt.files
+    }
+  
+    // 选择文件后：也过滤一次
+    if (attInput) attInput.addEventListener('change', () => {
+      addFilesToInput(attInput, 'attachments', attInput.files)
+      renderList(attInput, attCount, attList, '未选择文件')
+    })
+    if (imgInput) imgInput.addEventListener('change', () => {
+      addFilesToInput(imgInput, 'images', imgInput.files)
+      renderList(imgInput, imgCount, imgList, '未选择图片')
+    })
+  
+    // 点击打开选择框
+    function bindClickOpen(dropzone, inputEl){
+      if (!dropzone || !inputEl) return
+      dropzone.addEventListener('click', (e) => {
+        if (e.target && e.target.tagName === 'INPUT') return
+        inputEl.click()
+      })
+    }
+    bindClickOpen(dzAtt, attInput)
+    bindClickOpen(dzImg, imgInput)
+  
+    // 拖拽
+    function bindDrop(dropzone, inputEl, zone, afterRender){
+      if (!dropzone || !inputEl) return
+      function stop(e){ e.preventDefault(); e.stopPropagation() }
+  
+      dropzone.addEventListener('dragenter', stop)
+      dropzone.addEventListener('dragover', stop)
+      dropzone.addEventListener('drop', (e) => {
+        stop(e)
+        const files = e.dataTransfer?.files
+        if (!files || files.length === 0) return
+        addFilesToInput(inputEl, zone, files)
+        afterRender()
+      })
+    }
+  
+    bindDrop(dzAtt, attInput, 'attachments', () => renderList(attInput, attCount, attList, '未选择文件'))
+    bindDrop(dzImg, imgInput, 'images', () => renderList(imgInput, imgCount, imgList, '未选择图片'))
+  
+    // ✅ 粘贴：只进图片区
+    document.addEventListener('paste', (e) => {
+      if (!imgInput) return
+      const items = e.clipboardData?.items || []
+      const pastedImgs = []
+      for (const it of items) {
+        if (it.kind === 'file') {
+          const f = it.getAsFile()
+          if (f && (f.type || '').startsWith('image/')) pastedImgs.push(f)
         }
       }
-      if(fs.length) addFiles(fs);
-    });
-
-    box.addEventListener('dragover', (e)=>{
-      e.preventDefault();
-      box.style.borderColor = 'var(--brand)';
-      box.style.background = 'var(--brand-light)';
-    });
-    box.addEventListener('dragleave', ()=>{
-      box.style.borderColor = '#cbd5e1';
-      box.style.background = '#fbfdff';
-    });
-    box.addEventListener('drop', (e)=>{
-      e.preventDefault();
-      box.style.borderColor = '#cbd5e1';
-      box.style.background = '#fbfdff';
-      if(e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
-    });
-
-    box.addEventListener('click', () => input.click());
-    input.addEventListener('change', updateDisplay);
-  }
-
-  setupUpload('dropzoneFiles', 'fileInputAttachments', 'fileCountAtt', false);
-  setupUpload('dropzoneImages', 'fileInputImages', 'fileCountImg', true);
-})();
-</script>
-{% endif %}
+      if (!pastedImgs.length) return
+      addFilesToInput(imgInput, 'images', pastedImgs)
+      renderList(imgInput, imgCount, imgList, '未选择图片')
+    })
+  
+    // init
+    if (attInput) renderList(attInput, attCount, attList, '未选择文件')
+    if (imgInput) renderList(imgInput, imgCount, imgList, '未选择图片')
+  })()
+  </script>
+  {% endif %}
 {% endblock %}

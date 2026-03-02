@@ -80,7 +80,12 @@ app.include_router(documents_admin.router)
 #         print(p, m)
 # print("=======================")
 
-
+print("=== ROUTES START ===")
+for r in app.routes:
+    p = getattr(r, "path", "")
+    if p.startswith("/ui/companies/") and "/platforms/" in p:
+        print(p, getattr(r, "methods", None))
+print("=== ROUTES END ===")
 @app.on_event("startup")
 def on_startup() -> None:
     """应用启动时初始化数据库（例如建表/迁移等由 init_db 内部处理）"""

@@ -1035,3 +1035,11 @@ async def test_feishu():
         "sec_tail": sec[-8:] if sec else "",
         "feishu_resp": resp,
     }
+
+print("=== ROUTE NAMES ===")
+for r in app.routes:
+    name = getattr(r, "name", None)
+    path = getattr(r, "path", None)
+    if name and "platform_word" in name:
+        print(name, path, getattr(r, "methods", None))
+print("===================")

@@ -10,6 +10,28 @@
         <th>国家</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      {% set rows = rows or [] %} {% if rows|length == 0 %}
+      <tr>
+        <td colspan="6" class="muted">暂无数据。</td>
+      </tr>
+      {% else %} {% for r in rows %}
+      <tr>
+        <td>
+          <a
+            href="/ui/companies/{{ r.id }}"
+            style="text-decoration: none; color: inherit"
+          >
+            {{ r.company_name or ('公司 #' ~ r.id) }}
+          </a>
+        </td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>{{ r.country or '-' }}</td>
+      </tr>
+      {% endfor %} {% endif %}
+    </tbody>
   </table>
 </div>

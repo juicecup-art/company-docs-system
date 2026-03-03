@@ -2994,16 +2994,37 @@ async def ui_database(request: Request):
         "database_index.html",
         {**_base_ctx(request, current_user, "database")},
     )
+
+
 @router.get("/database/bank", response_class=HTMLResponse)
 async def ui_database_bank(request: Request):
     current_user = _get_current_user_for_ui(request)
     if not current_user:
         return _redirect("/ui/login")
 
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT
+                    id,
+                    company_name,
+                    country
+                FROM companies
+                WHERE deleted_at IS NULL
+                ORDER BY id DESC
+                """
+            )
+        ).mappings().all()
+
     return templates.TemplateResponse(
         "database_bank_detail.html",
-        {**_base_ctx(request, current_user, "database")},
+        {
+            **_base_ctx(request, current_user, "database"),
+            "rows": [dict(r) for r in rows],
+        },
     )
+
 # =========================
 # 平台详情（某个平台下有哪些公司）
 # GET /ui/platforms/{platform_name}

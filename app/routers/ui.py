@@ -2985,37 +2985,48 @@ def ui_platforms(request: Request):
 
 #数据库
 @router.get("/database", response_class=HTMLResponse)
-async def ui_database(request: Request):
+async def ui_database(request: Request, q: str | None = Query(default=None)):
     current_user = _get_current_user_for_ui(request)
     if not current_user:
         return _redirect("/ui/login")
 
+    q_s = (q or "").strip()
+
     return templates.TemplateResponse(
         "database_index.html",
-        {**_base_ctx(request, current_user, "database")},
+        {
+            **_base_ctx(request, current_user, "database"),
+            "q": {"q": q_s},
+        },
     )
 
 
 @router.get("/database/bank", response_class=HTMLResponse)
-async def ui_database_bank(request: Request):
+async def ui_database_bank(
+    request: Request,
+    q: str | None = Query(default=None),
+    limit: str | None = Query(default="200"),
+):
+    """
+    银行卡汇总右侧公司列表：
+    - 复用 companies 列表的搜索逻辑（_select_companies_sql_for_user）
+    - 这样 /ui/companies 和 /ui/database 用同一套 q 行为
+    """
     current_user = _get_current_user_for_ui(request)
     if not current_user:
         return _redirect("/ui/login")
 
+    q_s = (q or "").strip()
+    limit_i = _q_int(limit) or 200
+    limit_i = max(1, min(limit_i, 500))
+
+    # 直接复用公司列表的 SQL 生成逻辑，company_status 置空即可
+    stmt, params = _select_companies_sql_for_user(
+        current_user, limit_i, q_s, ""
+    )
+
     with engine.connect() as conn:
-        rows = conn.execute(
-            text(
-                """
-                SELECT
-                    id,
-                    company_name,
-                    country
-                FROM companies
-                WHERE deleted_at IS NULL
-                ORDER BY id DESC
-                """
-            )
-        ).mappings().all()
+        rows = conn.execute(stmt, params).mappings().all()
 
     return templates.TemplateResponse(
         "database_bank_detail.html",

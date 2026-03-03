@@ -51,3 +51,55 @@ platform_text_fields = Table(
     Column("is_deleted", Integer, nullable=False, server_default="0"),
     Column("deleted_at", DateTime),
 )
+platform_group_text_fields = Table(
+    "platform_group_text_fields", metadata,
+    Column("id", BigInteger, primary_key=True),
+    Column("platform_key", String(80), nullable=False),  # lower(trim(platform_name))
+    Column("label", String(80), nullable=False, server_default="文本框"),
+    Column("content", Text, nullable=False),
+    Column("sort_no", Integer, nullable=False, server_default="0"),
+    Column("created_at", DateTime, server_default=func.now()),
+    Column("updated_at", DateTime),
+    Column("is_deleted", Integer, nullable=False, server_default="0"),
+    Column("deleted_at", DateTime),
+)
+
+platform_group_documents = Table(
+    "platform_group_documents", metadata,
+    Column("id", BigInteger, primary_key=True),
+    Column("platform_key", String(80), nullable=False),
+    Column("document_id", BigInteger, nullable=False),
+    Column("doc_role", String(30), nullable=False, server_default="file"),
+    Column("is_deleted", Integer, nullable=False, server_default="0"),
+    Column("deleted_at", DateTime),
+    Column("created_at", DateTime, server_default=func.now()),
+)
+from sqlalchemy import Table, Column, BigInteger, Integer, String, Text, DateTime, MetaData
+from sqlalchemy.sql import func
+
+metadata = MetaData()
+
+platform_group_text_fields = Table(
+    "platform_group_text_fields", metadata,
+    Column("id", BigInteger, primary_key=True),
+    Column("platform_key", String(100), nullable=False),
+    Column("label", String(80), nullable=False, server_default="文本框"),
+    Column("content", Text, nullable=False),
+    Column("sort_no", Integer, nullable=False, server_default="0"),
+    Column("created_at", DateTime, server_default=func.now()),
+    Column("updated_at", DateTime),
+    Column("is_deleted", Integer, nullable=False, server_default="0"),
+    Column("deleted_at", DateTime),
+)
+
+platform_group_documents = Table(
+    "platform_group_documents", metadata,
+    Column("id", BigInteger, primary_key=True),
+    Column("platform_key", String(100), nullable=False),
+    Column("document_id", BigInteger, nullable=False),
+    Column("doc_role", String(30), nullable=False, server_default="file"),
+    Column("is_deleted", Integer, nullable=False, server_default="0"),
+    Column("deleted_at", DateTime),
+    Column("created_at", DateTime, server_default=func.now()),
+    Column("updated_at", DateTime),
+)

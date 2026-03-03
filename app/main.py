@@ -56,7 +56,8 @@ app.state.templates = Jinja2Templates(directory="app/templates")
 @app.on_event("startup")
 async def _startup_purge_task():
     asyncio.create_task(purge_loop())
-
+from app.routers import platforms as ui_platforms  # ✅正确：导入 app/ui/routes/platforms.py
+app.include_router(ui_platforms.router)
 # # ✅ 静态资源（可选）
 # app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(tickets_router)

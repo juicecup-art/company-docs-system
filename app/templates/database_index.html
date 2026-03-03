@@ -2,6 +2,10 @@
 {% block crumb %}数据库管理{% endblock %} {% block content %}
 
 <style>
+  .db-card {
+    margin-left: -10px;
+  }
+
   .page-head {
     display: flex;
     align-items: center;
@@ -69,8 +73,8 @@
   .db-main {
     flex: 1;
     padding: 12px 16px;
-    min-height: 260px;
-    max-height: 520px;
+    min-height: 310px;
+    max-height: 570px;
     overflow-y: auto;
   }
 
@@ -162,7 +166,7 @@
   }
 </style>
 
-<div class="card">
+<div class="card db-card">
   <!-- Header -->
   <div class="page-head">
     <h2 style="margin: 0">数据库管理</h2>
@@ -175,8 +179,8 @@
       <input
         type="text"
         name="q"
-        value=""
-        placeholder="搜索"
+        value="{{ (q.q if q and q.q is defined else '') }}"
+        placeholder="搜索公司名称"
         style="
           width: 340px;
           padding: 8px 10px;
@@ -187,6 +191,14 @@
         "
       />
       <button class="btn" type="submit">🔍 搜索</button>
+      {% if q and q.q %}
+      <a
+        class="btn btn-danger"
+        href="/ui/database"
+        style="text-decoration: none"
+        >清空</a
+      >
+      {% endif %}
     </form>
   </div>
 
@@ -217,6 +229,7 @@
     var navItems = document.querySelectorAll('.db-nav-item')
     var main = document.querySelector('.db-main')
     var navMaxHeight = 0
+    var searchForm = document.querySelector('.page-head form')
 
     navItems.forEach(function (item) {
       if (item.offsetHeight > navMaxHeight) {
@@ -224,16 +237,20 @@
       }
 
       item.addEventListener('click', function () {
+        var label = item.textContent.trim()
+        try {
+          localStorage.setItem('dbActiveTab', label)
+        } catch (e) {}
         navItems.forEach(function (el) {
           el.classList.remove('active')
         })
         item.classList.add('active')
 
         if (!main) return
-        var label = item.textContent.trim()
         main.innerHTML = ''
         if (label === '银行卡汇总') {
-          fetch('/ui/database/bank', { headers: { 'X-Partial': '1' } })
+          var search = window.location.search || ''
+          fetch('/ui/database/bank' + search, { headers: { 'X-Partial': '1' } })
             .then(function (res) {
               return res.text()
             })
@@ -262,8 +279,34 @@
       })
     })
 
+    if (searchForm) {
+      searchForm.addEventListener('submit', function (e) {
+        var active = document.querySelector('.db-nav-item.active')
+        if (!active) return
+        var label = active.textContent.trim()
+        if (label !== '银行卡汇总') {
+          e.preventDefault()
+        }
+      })
+    }
+
     if (navItems.length > 0) {
-      navItems[0].click()
+      var saved = null
+      try {
+        saved = localStorage.getItem('dbActiveTab')
+      } catch (e) {}
+
+      var target = null
+      if (saved) {
+        navItems.forEach(function (item) {
+          var label = item.textContent.trim()
+          if (!target && label === saved) {
+            target = item
+          }
+        })
+      }
+
+      ;(target || navItems[0]).click()
     }
   })
 </script>

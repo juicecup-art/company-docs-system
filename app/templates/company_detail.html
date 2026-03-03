@@ -464,7 +464,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     </div>
   </div>
 
-  {# 1) 定义哪些名字算“收款渠道” #}
+  {# 1) 定义哪些名字算“收款平台” #}
   {% set pay_names = ['skyee','payoneer','worldfirst','pingpong'] %}
 
   {# 2) 拆两组 #}
@@ -512,9 +512,9 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     </table>
   </div>
 
-  {# =============== 收款渠道（固定显示，哪怕没有也显示） =============== #}
+  {# =============== 收款平台（固定显示，哪怕没有也显示） =============== #}
   <div style="margin-top: 12px; font-weight: 800; padding: 6px 2px">
-    收款渠道
+    收款平台
   </div>
 
   <div class="pl-scroll">
@@ -544,7 +544,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="4" class="muted">暂无收款渠道记录。</td>
+            <td colspan="4" class="muted">暂无收款平台记录。</td>
           </tr>
         {% endif %}
       </tbody>

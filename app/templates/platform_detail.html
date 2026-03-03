@@ -15,830 +15,990 @@ as ui %}
     <div class="header-right">{{ ui.back('/ui/platforms', '列表') }}</div>
   </div>
 
-  {# 顶部说明 + 文本框 + 上传区（平台聚合页专用） #}
-  <div class="tip-card">
-    <div class="tip-title">说明</div>
-    <div class="tip-text">
-      当前页面是“平台聚合视图”，展示该平台关联的公司列表。<br />
-      你可以在这里维护该平台的通用说明文本，并上传该平台的公共文件（不属于任何具体公司）。
-    </div>
-
-    <div class="agg-tools">
-      {# ========== 文本框：新增 + 列表 ========== #}
-      <div class="tool-card">
-        <div class="tool-head">
-          <div class="tool-title">平台说明文本</div>
-          <div class="tool-sub">
-            新增一条平台级文本（可用于操作指引/注意事项/账号信息等）
-          </div>
-        </div>
-
-        <form
-          class="tool-form"
-          method="post"
-          action="{{ url_for('platform_group_text_add', platform_name=platform_name) }}"
-        >
-          <div class="form-grid">
-            <div class="form-row">
-              <label>标题</label>
-              <input
-                type="text"
-                name="label"
-                placeholder="例如：收款绑定说明 / 账号登录信息"
-                maxlength="80"
-              />
-            </div>
-            <div class="form-row small">
-              <label>排序</label>
-              <input type="number" name="sort_no" value="0" />
-            </div>
-            <div class="form-row full">
-              <label>内容</label>
-              <textarea
-                name="content"
-                rows="3"
-                placeholder="请输入内容（必填）"
-              ></textarea>
-            </div>
-          </div>
-          <div class="tool-actions">
-            <button class="btn-primary" type="submit">新增文本</button>
-          </div>
-        </form>
-
-        <div class="tool-list">
-          {% if fields and fields|length > 0 %} {% for f in fields %}
-          <div class="item">
-            <div class="item-head">
-              <div class="item-title">
-                <span class="badge">#{{ f.id }}</span>
-                <span class="name">{{ f.label }}</span>
-                <span class="muted">排序 {{ f.sort_no }}</span>
-              </div>
-            </div>
-
-            <form
-              class="item-form"
-              method="post"
-              action="{{ url_for('platform_group_text_update', platform_name=platform_name, field_id=f.id) }}"
-            >
-              <div class="form-grid">
-                <div class="form-row">
-                  <label>标题</label>
-                  <input
-                    type="text"
-                    name="label"
-                    value="{{ f.label }}"
-                    maxlength="80"
-                  />
-                </div>
-                <div class="form-row small">
-                  <label>排序</label>
-                  <input type="number" name="sort_no" value="{{ f.sort_no }}" />
-                </div>
-                <div class="form-row full">
-                  <label>内容</label>
-                  <textarea name="content" rows="3">{{ f.content }}</textarea>
-                </div>
-              </div>
-              <div class="item-actions">
-                <button class="btn-ghost" type="submit">保存</button>
-              </div>
-            </form>
-
-            <form
-              class="item-delete"
-              method="post"
-              action="{{ url_for('platform_group_text_delete', platform_name=platform_name, field_id=f.id) }}"
-              onsubmit="return confirm('确认删除这条文本吗？')"
-            >
-              <button class="btn-danger" type="submit">删除</button>
-            </form>
-          </div>
-          {% endfor %} {% else %}
-          <div class="empty-note">暂无平台文本</div>
-          {% endif %}
-        </div>
+  {# 顶部说明 + 文本/文件（列表默认展示；表单可折叠） #}
+  <div class="tip-card tip-compact" id="platformExtras">
+  
+    <div class="tip-head">
+      <div class="tip-left">
+        <div class="tip-title">平台附加信息</div>
+          <!-- 当前页面是“平台聚合视图”，展示该平台关联的公司列表。你可以维护平台通用说明文本，并上传平台公共文件（不属于任何具体公司）。 -->
       </div>
-
-      {# ========== 文件上传区：上传 + 列表 ========== #}
-      <div class="tool-card">
-        <div class="tool-head">
-          <div class="tool-title">平台公共文件</div>
-          <div class="tool-sub">
-            上传该平台的通用文件（例如：模板、截图、PDF 指引等）
+    </div>
+  
+    <div class="agg-tools agg-tools-compact">
+      {# ========== 左：平台说明文本（列表默认展示；新增折叠） ========== #}
+      <div class="tool-card tool-card-compact">
+        <div class="tool-head tool-head-compact">
+          <div>
+            <div class="tool-title">平台链接</div>
           </div>
-        </div>
-
-        {% if not can_upload %}
-        <div class="empty-note">
-          该平台当前没有任何关联公司，documents.company_id
-          外键无法落库，所以暂时不能上传文件。
-          （先给该平台关联任意公司即可启用上传）
-        </div>
-        {% endif %}
-
-        <form
-          class="tool-form"
-          method="post"
-          enctype="multipart/form-data"
-          action="{{ url_for('platform_group_file_upload', platform_name=platform_name) }}"
-        >
-          <div class="upload-row">
-            <input
-              class="file-input"
-              type="file"
-              name="file"
-              {%
-              if
-              not
-              can_upload
-              %}disabled{%
-              endif
-              %}
-            />
-            <button
-              class="btn-primary"
-              type="submit"
-              {%
-              if
-              not
-              can_upload
-              %}disabled
-              style="opacity: 0.6; cursor: not-allowed"
-              {%
-              endif
-              %}
-            >
-              上传文件
+          <div class="tool-head-actions">
+            <button class="btn-primary btn-sm" type="button" data-toggle="#addTextBox">
+              新增
             </button>
           </div>
-          <div class="hint">支持：doc/docx/pdf/png/jpg/jpeg/webp</div>
-        </form>
-
-        <div class="tool-list">
-          {% if files and files|length > 0 %} {% for d in files %}
-          <div class="file-item">
-            <div class="file-left">
-              <div class="file-name">{{ d.original_filename }}</div>
-              <div class="file-meta">
-                <span class="badge">doc#{{ d.doc_id }}</span>
-                <span class="muted">{{ (d.file_size or 0) }} bytes</span>
-                {% if d.created_at %}<span class="muted"
-                  >{{ d.created_at }}</span
-                >{% endif %}
+        </div>
+  
+        {# 新增表单：折叠 #}
+        <div id="addTextBox" style="display:none">
+          <form
+            class="tool-form tool-form-compact"
+            method="post"
+            action="{{ url_for('platform_group_text_add', platform_name=platform_name) }}"
+          >
+            <div class="form-grid form-grid-compact">
+              <div class="form-row">
+                <label>标题</label>
+                <input
+                  type="text"
+                  name="label"
+                  placeholder="平台链接"
+                  maxlength="80"
+                />
+              </div>
+  
+              <div class="form-row small">
+                <label>排序</label>
+                <input type="number" name="sort_no" value="0" />
+              </div>
+  
+              {# 默认一行 #}
+              <div class="form-row full">
+                <label>内容（默认一行）</label>
+                <input type="text" name="content" placeholder="注册链接" />
+                <div class="mini-actions">
+                  <button class="btn-ghost btn-sm" type="button" data-toggle="#addTextLong">
+                    写长文本
+                  </button>
+                </div>
+              </div>
+  
+              {# 长文本：可选折叠 #}
+              <div class="form-row full" id="addTextLong" style="display:none">
+                <label>长文本</label>
+                <textarea name="content_long" rows="3" placeholder="多行内容写这里（提交时覆盖上面的单行）"></textarea>
               </div>
             </div>
-            <div class="file-actions">
-              <a
-                class="btn-ghost"
-                href="/ui/platforms/files/{{ d.doc_id }}/preview"
-                target="_blank"
-                >预览</a
-              >
-              <a
-                class="btn-ghost"
-                href="/ui/platforms/files/{{ d.doc_id }}/download"
-                >下载</a
-              >
+  
+            <div class="tool-actions tool-actions-compact">
+              <button class="btn-primary btn-sm" type="submit">保存新增</button>
+            </div>
+          </form>
+  
+          <div class="divider-line"></div>
+        </div>
+  
+        {# ✅ 列表：默认展示（紧凑展示，一行 + 操作） #}
+        <div class="tool-list tool-list-compact">
+          {% if fields and fields|length > 0 %}
+            {% for f in fields %}
+            <div class="rowline">
+              <div class="rowline-main">
+                <span class="badge meta-hide">#{{ f.id }}</span>
+                <span class="rowline-title">{{ f.label }}</span>
+                <span class="muted meta-hide">排序 {{ f.sort_no }}</span>
+              </div>
+  
+              <div class="rowline-actions">
+                <button class="btn-ghost btn-sm" type="button" data-toggle="#edit{{ f.id }}">
+                  编辑
+                </button>
+  
+                <form
+                  method="post"
+                  action="{{ url_for('platform_group_text_delete', platform_name=platform_name, field_id=f.id) }}"
+                  onsubmit="return confirm('确认删除这条文本吗？')"
+                  style="display:inline"
+                >
+                  <button class="btn-danger btn-sm" type="submit">删除</button>
+                </form>
+              </div>
+            </div>
+  
+            {# 编辑区：折叠（默认隐藏） #}
+            <div class="editbox" id="edit{{ f.id }}" style="display:none">
               <form
+                class="item-form item-form-compact"
                 method="post"
-                action="{{ url_for('platform_group_file_delete', platform_name=platform_name, pd_id=d.pd_id) }}"
-                onsubmit="return confirm('确认删除该文件关联吗？')"
-                style="display: inline"
+                action="{{ url_for('platform_group_text_update', platform_name=platform_name, field_id=f.id) }}"
               >
-                <button class="btn-danger" type="submit">删除</button>
+                <div class="form-grid form-grid-compact">
+                  <div class="form-row">
+                    <label>标题</label>
+                    <input type="text" name="label" value="{{ f.label }}" maxlength="80" />
+                  </div>
+  
+                  <div class="form-row small">
+                    <label>排序</label>
+                    <input type="number" name="sort_no" value="{{ f.sort_no }}" />
+                  </div>
+  
+                  <div class="form-row full">
+                    <label>内容（一行）</label>
+                    <input type="text" name="content" value="{{ f.content }}" />
+                    <div class="mini-actions">
+                      <button class="btn-ghost btn-sm" type="button" data-toggle="#editLong{{ f.id }}">
+                        多行编辑
+                      </button>
+                    </div>
+                  </div>
+  
+                  <div class="form-row full" id="editLong{{ f.id }}" style="display:none">
+                    <label>多行内容</label>
+                    <textarea name="content" rows="3">{{ f.content }}</textarea>
+                  </div>
+                </div>
+  
+                <div class="tool-actions tool-actions-compact">
+                  <button class="btn-primary btn-sm" type="submit">保存</button>
+                  <button class="btn-ghost btn-sm" type="button" data-toggle="#edit{{ f.id }}">收起</button>
+                </div>
               </form>
             </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-note">暂无平台文本</div>
+          {% endif %}
+        </div>
+      </div>
+  
+      {# ========== 右：平台公共文件（列表默认展示；上传折叠） ========== #}
+      <div class="tool-card tool-card-compact">
+        <div class="tool-head tool-head-compact">
+          <div>
+            <div class="tool-title">平台公共文件</div>
+            <div class="tool-sub">列表默认展示；上传可展开</div>
           </div>
-          {% endfor %} {% else %}
-          <div class="empty-note">暂无平台公共文件</div>
+  
+          <div class="tool-head-actions">
+            <button class="btn-primary btn-sm" type="button" data-toggle="#uploadBox">
+              上传
+            </button>
+          </div>
+        </div>
+  
+        {# 上传表单：折叠 #}
+        <div id="uploadBox" style="display:none">
+          <form
+            class="tool-form tool-form-compact"
+            method="post"
+            enctype="multipart/form-data"
+            action="{{ url_for('platform_group_file_upload', platform_name=platform_name) }}"
+          >
+            <div class="upload-row upload-row-compact">
+              <input class="file-input" type="file" name="file" required />
+              <button class="btn-primary btn-sm" type="submit">确认上传</button>
+            </div>
+            <div class="hint">支持：doc/docx/pdf/png/jpg/jpeg/webp</div>
+          </form>
+          <div class="divider-line"></div>
+        </div>
+  
+        {# ✅ 文件列表：默认展示 #}
+        <div class="tool-list tool-list-compact">
+          {% if files and files|length > 0 %}
+            {% for d in files %}
+            <div class="file-row file-row-compact">
+              <div class="file-left">
+                <div class="file-name">{{ d.original_filename }}</div>
+                <div class="file-meta file-meta-compact meta-hide">
+                  <span class="badge">doc#{{ d.doc_id }}</span>
+                  <span class="muted">{{ (d.file_size or 0) }} bytes</span>
+                  {% if d.created_at %}<span class="muted">{{ d.created_at }}</span>{% endif %}
+                </div>
+              </div>
+  
+              <div class="file-actions">
+                <a class="btn-ghost btn-sm" href="{{ url_for('ui_doc_preview', doc_id=d.doc_id) }}" target="_blank">预览</a>
+                <a class="btn-ghost btn-sm" href="{{ url_for('ui_doc_download', doc_id=d.doc_id) }}">下载</a>
+                <form
+                  method="post"
+                  action="{{ url_for('platform_group_file_delete', platform_name=platform_name, pd_id=d.pd_id) }}"
+                  onsubmit="return confirm('确认删除该文件关联吗？')"
+                  style="display:inline"
+                >
+                  <button class="btn-danger btn-sm" type="submit">删除</button>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-note">暂无平台公共文件</div>
           {% endif %}
         </div>
       </div>
     </div>
   </div>
+        <div class="table-container">
+          <table id="companyTable">
+            <thead>
+              <tr>
+                <th width="80">ID</th>
+                <th>公司名称</th>
+                <th width="100">国家</th>
+                <th>店铺/域名</th>
+                <th width="120">状态</th>
+                <th width="140">进度</th>
+                <th width="90" class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rows %}
+              <tr
+                class="company-row"
+                data-company="{{ (r.company_name or '')|lower }} {{ (r.domain or '')|lower }}"
+              >
+                <td class="muted-id">#{{ r.cp_id }}</td>
+                <td><div class="row-title">{{ r.company_name }}</div></td>
+                <td>
+                  {% if r.country %}
+                  <span class="tag-country">{{ r.country }}</span>
+                  {% else %}
+                  <span class="muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="row-sub">
+                    {% if r.store_url %}
+                    <a href="{{ r.store_url }}" target="_blank" class="link-sub"
+                      >店铺链接</a
+                    >
+                    {% endif %} {% if r.store_url and r.domain %}<span
+                      class="divider"
+                      >|</span
+                    >{% endif %} {% if r.domain %}{{ r.domain }}{% endif %} {%
+                    if not r.store_url and not r.domain %}<span class="muted"
+                      >-</span
+                    >{% endif %}
+                  </div>
+                </td>
+                <td>
+                  {% if r.status %}
+                  <span class="status-dot"></span> {{ r.status }} {% else %}
+                  <span class="muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="progress-bar-bg">
+                    <div
+                      class="progress-bar-fill"
+                      style="width: {{ r.progress|default(0) }}%;"
+                    ></div>
+                  </div>
+                  <div class="progress-text">{{ r.progress|default(0) }}%</div>
+                </td>
+                <td class="text-right">
+                  <a
+                    class="btn-icon-only"
+                    href="/ui/company-platforms/{{ r.cp_id }}"
+                    title="查看详情"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      fill="none"
+                    >
+                      <path
+                        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                      ></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
 
-  {# 公司列表 #}
-  <div class="content-card">
-    <div class="card-toolbar">
-      <div class="search-wrap">
-        <svg
-          class="search-icon"
-          viewBox="0 0 24 24"
-          width="18"
-          height="18"
-          stroke="currentColor"
-          stroke-width="2"
-          fill="none"
-        >
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input
-          id="companySearch"
-          type="text"
-          placeholder="搜索公司名称 / 域名..."
-          autocomplete="off"
-        />
-        <div class="search-counter" id="companyCountShown">
-          {{ rows|length }}
+          <div
+            id="companyEmpty"
+            class="empty-placeholder"
+            style="display: none"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="48"
+              height="48"
+              stroke="#cbd5e0"
+              stroke-width="1"
+              fill="none"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <p>未找到匹配的公司</p>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="table-container">
-      <table id="companyTable">
-        <thead>
-          <tr>
-            <th width="80">ID</th>
-            <th>公司名称</th>
-            <th width="100">国家</th>
-            <th>店铺/域名</th>
-            <th width="120">状态</th>
-            <th width="140">进度</th>
-            <th width="90" class="text-right">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr
-            class="company-row"
-            data-company="{{ (r.company_name or '')|lower }} {{ (r.domain or '')|lower }}"
-          >
-            <td class="muted-id">#{{ r.cp_id }}</td>
-            <td><div class="row-title">{{ r.company_name }}</div></td>
-            <td>
-              {% if r.country %}
-              <span class="tag-country">{{ r.country }}</span>
-              {% else %}
-              <span class="muted">-</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="row-sub">
-                {% if r.store_url %}
-                <a href="{{ r.store_url }}" target="_blank" class="link-sub"
-                  >店铺链接</a
-                >
-                {% endif %} {% if r.store_url and r.domain %}<span
-                  class="divider"
-                  >|</span
-                >{% endif %} {% if r.domain %}{{ r.domain }}{% endif %} {% if
-                not r.store_url and not r.domain %}<span class="muted">-</span
-                >{% endif %}
-              </div>
-            </td>
-            <td>
-              {% if r.status %}
-              <span class="status-dot"></span> {{ r.status }} {% else %}
-              <span class="muted">-</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="progress-bar-bg">
-                <div
-                  class="progress-bar-fill"
-                  style="width: {{ r.progress|default(0) }}%;"
-                ></div>
-              </div>
-              <div class="progress-text">{{ r.progress|default(0) }}%</div>
-            </td>
-            <td class="text-right">
-              <a
-                class="btn-icon-only"
-                href="/ui/company-platforms/{{ r.cp_id }}"
-                title="查看详情"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  fill="none"
-                >
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <style>
+      :root {
+        --primary-color: #3b82f6;
+        --primary-hover: #2563eb;
+        --bg-card: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+      }
 
-      <div id="companyEmpty" class="empty-placeholder" style="display: none">
-        <svg
-          viewBox="0 0 24 24"
-          width="48"
-          height="48"
-          stroke="#cbd5e0"
-          stroke-width="1"
-          fill="none"
-        >
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <p>未找到匹配的公司</p>
-      </div>
-    </div>
-  </div>
-</div>
+      .dashboard-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        color: var(--text-main);
+      }
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px 0;
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .platform-avatar {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
+        font-size: 24px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+      }
+      .header-titles h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 500;
+      }
 
-<style>
-  :root {
-    --primary-color: #3b82f6;
-    --primary-hover: #2563eb;
-    --bg-card: #ffffff;
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
-  }
+      .tip-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        padding: 12px 14px;
+        margin: 8px 0 16px;
+      }
+      .tip-title {
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+      .tip-text {
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
 
-  .dashboard-wrapper {
-    max-width: 1200px;
-    margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      Helvetica, Arial, sans-serif;
-    color: var(--text-main);
-  }
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px 0;
-  }
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .platform-avatar {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: #fff;
-    font-size: 24px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
-  }
-  .header-titles h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-  .subtitle {
-    font-size: 13px;
-    color: var(--text-muted);
-    font-weight: 500;
-  }
+      .agg-tools {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      @media (max-width: 980px) {
+        .agg-tools {
+          grid-template-columns: 1fr;
+        }
+      }
 
-  .tip-card {
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    padding: 12px 14px;
-    margin: 8px 0 16px;
-  }
-  .tip-title {
-    font-weight: 800;
-    margin-bottom: 4px;
-  }
-  .tip-text {
-    color: var(--text-muted);
-    font-size: 13px;
-    line-height: 1.45;
-  }
+      .tool-card {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px;
+        background: #fcfcff;
+      }
+      .tool-head {
+        margin-bottom: 10px;
+      }
+      .tool-title {
+        font-weight: 800;
+      }
+      .tool-sub {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
 
-  .agg-tools {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 12px;
-  }
-  @media (max-width: 980px) {
-    .agg-tools {
-      grid-template-columns: 1fr;
-    }
-  }
+      .tool-form {
+        margin-top: 10px;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 120px;
+        gap: 10px;
+      }
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .form-row.full {
+        grid-column: 1 / -1;
+      }
+      .form-row.small input {
+        max-width: 120px;
+      }
+      label {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 600;
+      }
+      input[type='text'],
+      input[type='number'],
+      textarea {
+        width: 100%;
+        padding: 10px 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        background: #fff;
+      }
+      textarea {
+        resize: vertical;
+      }
+      input:focus,
+      textarea:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
 
-  .tool-card {
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px;
-    background: #fcfcff;
-  }
-  .tool-head {
-    margin-bottom: 10px;
-  }
-  .tool-title {
-    font-weight: 800;
-  }
-  .tool-sub {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
+      .tool-actions {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .btn-primary {
+        background: #3b82f6;
+        border: 1px solid #3b82f6;
+        color: #fff;
+        padding: 9px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .btn-primary:hover {
+        background: #2563eb;
+        border-color: #2563eb;
+      }
+      .btn-ghost {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .btn-ghost:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+      }
+      .btn-danger {
+        background: #fff;
+        border: 1px solid #fecaca;
+        color: #b91c1c;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .btn-danger:hover {
+        background: #fff1f2;
+        border-color: #fda4af;
+      }
 
-  .tool-form {
-    margin-top: 10px;
-  }
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 120px;
-    gap: 10px;
-  }
-  .form-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .form-row.full {
-    grid-column: 1 / -1;
-  }
-  .form-row.small input {
-    max-width: 120px;
-  }
-  label {
-    font-size: 12px;
-    color: #64748b;
-    font-weight: 600;
-  }
-  input[type='text'],
-  input[type='number'],
-  textarea {
-    width: 100%;
-    padding: 10px 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-    background: #fff;
-  }
-  textarea {
-    resize: vertical;
-  }
-  input:focus,
-  textarea:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
+      .tool-list {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .empty-note {
+        color: #94a3b8;
+        font-size: 13px;
+        padding: 8px 2px;
+      }
 
-  .tool-actions {
-    margin-top: 10px;
-    display: flex;
-    justify-content: flex-end;
-  }
-  .btn-primary {
-    background: #3b82f6;
-    border: 1px solid #3b82f6;
-    color: #fff;
-    padding: 9px 12px;
-    border-radius: 8px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .btn-primary:hover {
-    background: #2563eb;
-    border-color: #2563eb;
-  }
-  .btn-ghost {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    color: #334155;
-    padding: 8px 10px;
-    border-radius: 8px;
-    font-weight: 700;
-    text-decoration: none;
-    cursor: pointer;
-  }
-  .btn-ghost:hover {
-    border-color: #cbd5e1;
-    background: #f8fafc;
-  }
-  .btn-danger {
-    background: #fff;
-    border: 1px solid #fecaca;
-    color: #b91c1c;
-    padding: 8px 10px;
-    border-radius: 8px;
-    font-weight: 800;
-    cursor: pointer;
-  }
-  .btn-danger:hover {
-    background: #fff1f2;
-    border-color: #fda4af;
-  }
+      .item {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .item-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .item-title {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .badge {
+        display: inline-block;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #dbeafe;
+        font-weight: 800;
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 999px;
+      }
+      .name {
+        font-weight: 800;
+      }
+      .muted {
+        color: #94a3b8;
+        font-size: 12px;
+      }
+      .item-actions,
+      .item-delete {
+        margin-top: 8px;
+        display: flex;
+        justify-content: flex-end;
+      }
 
-  .tool-list {
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .empty-note {
-    color: #94a3b8;
-    font-size: 13px;
-    padding: 8px 2px;
-  }
+      .upload-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .file-input {
+        flex: 1;
+        min-width: 220px;
+      }
+      .hint {
+        margin-top: 8px;
+        color: #94a3b8;
+        font-size: 12px;
+      }
 
-  .item {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px;
-  }
-  .item-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .item-title {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .badge {
-    display: inline-block;
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #dbeafe;
-    font-weight: 800;
-    font-size: 12px;
-    padding: 2px 6px;
-    border-radius: 999px;
-  }
-  .name {
-    font-weight: 800;
-  }
-  .muted {
-    color: #94a3b8;
-    font-size: 12px;
-  }
-  .item-actions,
-  .item-delete {
-    margin-top: 8px;
-    display: flex;
-    justify-content: flex-end;
-  }
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #fff;
+        padding: 10px;
+      }
+      .file-left {
+        min-width: 0;
+      }
+      .file-name {
+        font-weight: 800;
+        color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 520px;
+      }
+      .file-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+      .file-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
 
-  .upload-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .file-input {
-    flex: 1;
-    min-width: 220px;
-  }
-  .hint {
-    margin-top: 8px;
-    color: #94a3b8;
-    font-size: 12px;
-  }
+      .content-card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+      }
+      .card-toolbar {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
+        background: #fcfcfc;
+      }
+      .search-wrap {
+        position: relative;
+        max-width: 420px;
+        display: flex;
+        align-items: center;
+      }
+      .search-icon {
+        position: absolute;
+        left: 12px;
+        color: #94a3b8;
+        pointer-events: none;
+      }
+      .search-wrap input {
+        width: 100%;
+        padding: 10px 12px 10px 38px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .search-wrap input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      .search-counter {
+        position: absolute;
+        right: 12px;
+        font-size: 12px;
+        color: #cbd5e1;
+        font-weight: 600;
+      }
 
-  .file-item {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    align-items: center;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    background: #fff;
-    padding: 10px;
-  }
-  .file-left {
-    min-width: 0;
-  }
-  .file-name {
-    font-weight: 800;
-    color: #334155;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 520px;
-  }
-  .file-meta {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 4px;
-  }
-  .file-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
+      .table-container {
+        width: 100%;
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        text-align: left;
+        padding: 12px 20px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      td {
+        padding: 14px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14px;
+        vertical-align: middle;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover td {
+        background: #f8fafc;
+      }
 
-  .content-card {
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-  }
-  .card-toolbar {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color);
-    background: #fcfcfc;
-  }
-  .search-wrap {
-    position: relative;
-    max-width: 420px;
-    display: flex;
-    align-items: center;
-  }
-  .search-icon {
-    position: absolute;
-    left: 12px;
-    color: #94a3b8;
-    pointer-events: none;
-  }
-  .search-wrap input {
-    width: 100%;
-    padding: 10px 12px 10px 38px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .search-wrap input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-  .search-counter {
-    position: absolute;
-    right: 12px;
-    font-size: 12px;
-    color: #cbd5e1;
-    font-weight: 600;
-  }
+      .muted-id {
+        color: #94a3b8;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      .row-title {
+        font-weight: 600;
+        color: #334155;
+      }
+      .tag-country {
+        background: #e0f2fe;
+        color: #0369a1;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .row-sub {
+        font-size: 12px;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .link-sub {
+        color: #3b82f6;
+        text-decoration: none;
+      }
+      .link-sub:hover {
+        text-decoration: underline;
+      }
+      .divider {
+        color: #e2e8f0;
+      }
+      .status-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #10b981;
+        margin-right: 4px;
+        vertical-align: middle;
+      }
+      .progress-bar-bg {
+        width: 80px;
+        height: 6px;
+        background: #f1f5f9;
+        border-radius: 3px;
+        overflow: hidden;
+        display: inline-block;
+        vertical-align: middle;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background: #3b82f6;
+        border-radius: 3px;
+      }
+      .progress-text {
+        display: inline-block;
+        font-size: 12px;
+        color: #64748b;
+        margin-left: 6px;
+        width: 30px;
+      }
+      .text-right {
+        text-align: right;
+      }
+      .btn-icon-only {
+        color: #94a3b8;
+        padding: 6px;
+        border-radius: 6px;
+        display: inline-block;
+        transition: all 0.2s;
+      }
+      .btn-icon-only:hover {
+        color: #3b82f6;
+        background: #eff6ff;
+      }
+      .empty-placeholder {
+        text-align: center;
+        padding: 40px;
+        color: #94a3b8;
+      }
+      .empty-placeholder p {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+      /* ===== 附加区压缩 + 折叠，不改整体风格 ===== */
+    .tip-compact { padding: 10px 14px; }
+    .tip-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .tip-text-compact { margin-top: 2px; }
 
-  .table-container {
-    width: 100%;
-    overflow-x: auto;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  th {
-    text-align: left;
-    padding: 12px 20px;
-    background: #f8fafc;
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border-color);
-  }
-  td {
-    padding: 14px 20px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
-    vertical-align: middle;
-  }
-  tr:last-child td {
-    border-bottom: none;
-  }
-  tr:hover td {
-    background: #f8fafc;
-  }
+    .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+    .tool-card-compact { padding: 10px; }
+    .tool-head-compact { margin-bottom: 8px; }
+    .agg-tools-compact { gap: 10px; margin-top: 10px; }
 
-  .muted-id {
-    color: #94a3b8;
-    font-family: monospace;
-    font-size: 13px;
-  }
-  .row-title {
-    font-weight: 600;
-    color: #334155;
-  }
-  .tag-country {
-    background: #e0f2fe;
-    color: #0369a1;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .row-sub {
-    font-size: 12px;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .link-sub {
-    color: #3b82f6;
-    text-decoration: none;
-  }
-  .link-sub:hover {
-    text-decoration: underline;
-  }
-  .divider {
-    color: #e2e8f0;
-  }
-  .status-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #10b981;
-    margin-right: 4px;
-    vertical-align: middle;
-  }
-  .progress-bar-bg {
-    width: 80px;
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 3px;
-    overflow: hidden;
-    display: inline-block;
-    vertical-align: middle;
-  }
-  .progress-bar-fill {
-    height: 100%;
-    background: #3b82f6;
-    border-radius: 3px;
-  }
-  .progress-text {
-    display: inline-block;
-    font-size: 12px;
-    color: #64748b;
-    margin-left: 6px;
-    width: 30px;
-  }
-  .text-right {
-    text-align: right;
-  }
-  .btn-icon-only {
-    color: #94a3b8;
-    padding: 6px;
-    border-radius: 6px;
-    display: inline-block;
-    transition: all 0.2s;
-  }
-  .btn-icon-only:hover {
-    color: #3b82f6;
-    background: #eff6ff;
-  }
-  .empty-placeholder {
-    text-align: center;
-    padding: 40px;
-    color: #94a3b8;
-  }
-  .empty-placeholder p {
-    margin-top: 10px;
-    font-size: 14px;
-  }
-</style>
+    .form-grid-compact { grid-template-columns: 1fr 110px; gap: 8px; }
+    .tool-actions-compact { margin-top: 8px; }
+    .tool-list-compact { margin-top: 10px; gap: 8px; }
 
-<script>
-  ;(function () {
-    const input = document.getElementById('companySearch')
-    const rows = Array.from(document.querySelectorAll('.company-row'))
-    const empty = document.getElementById('companyEmpty')
-    const shownEl = document.getElementById('companyCountShown')
+    .item-compact { padding: 9px; }
+    .item-head-compact { margin-bottom: 6px; }
+    .item-actions-compact, .item-delete-compact { margin-top: 6px; }
 
-    function apply() {
-      const q = (input.value || '').trim().toLowerCase()
-      let shown = 0
-      rows.forEach((tr) => {
-        const name = tr.getAttribute('data-company') || ''
-        const ok = !q || name.includes(q)
-        tr.style.display = ok ? '' : 'none'
-        if (ok) shown++
-      })
-      if (shownEl) shownEl.textContent = String(shown)
-      if (empty)
-        empty.style.display = rows.length > 0 && shown === 0 ? '' : 'none'
-    }
+    .upload-row-compact { gap: 8px; }
+    .file-item-compact { padding: 9px; }
+    .file-meta-compact { margin-top: 2px; }
 
-    if (input) {
-      apply()
-      input.addEventListener('input', apply)
-      input.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-          input.value = ''
+    .mini-actions { margin-top: 6px; display:flex; justify-content:flex-end; }
+    /* ===== 最小占用：列表默认展示，表单/说明折叠 ===== */
+.tip-compact { padding: 10px 14px; }
+.tip-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.tip-actions { display:flex; gap:8px; align-items:center; }
+.tip-text-compact { margin-top: 4px; font-size: 12px; line-height: 1.35; }
+
+.btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+.tool-card-compact { padding: 10px; }
+.tool-head-compact { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom: 8px; }
+.tool-head-actions { display:flex; gap:8px; align-items:center; }
+.tool-form-compact { margin-top: 8px; }
+
+.form-grid-compact { grid-template-columns: 1fr 110px; gap: 8px; }
+.tool-actions-compact { margin-top: 8px; display:flex; justify-content:flex-end; gap:8px; }
+
+.divider-line { margin: 10px 0; height: 1px; background: #eef2f7; }
+
+.tool-list-compact { margin-top: 8px; gap: 8px; }
+.mini-actions { margin-top: 6px; display:flex; justify-content:flex-end; }
+
+.rowline {
+  display:flex; justify-content:space-between; align-items:center;
+  gap:10px; padding: 8px 10px;
+  border: 1px solid #e2e8f0; border-radius: 10px; background:#fff;
+}
+.rowline-main { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+.rowline-title { font-weight: 800; color:#334155; max-width: 320px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rowline-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+.editbox {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px dashed #e2e8f0;
+  border-radius: 10px;
+  background: #fcfcff;
+}
+
+.file-row-compact {
+  display:flex; justify-content:space-between; align-items:center;
+  gap:10px; padding: 8px 10px;
+  border: 1px solid #e2e8f0; border-radius: 10px; background:#fff;
+}
+.file-meta-compact { margin-top: 2px; display:flex; gap:8px; flex-wrap:wrap; }
+/* ===== 隐藏红框信息 ===== */
+.meta-hide { display: none !important; }
+
+/* ===== 平台附加信息整体更紧凑（不改整体风格） ===== */
+.tip-compact { padding: 8px 12px; margin: 6px 0 12px; }
+.tool-card-compact { padding: 8px; }
+.tool-title { font-size: 14px; }
+.tool-sub { font-size: 11px; }
+
+.rowline { padding: 6px 8px; border-radius: 10px; }
+.rowline-title { font-size: 13px; max-width: 240px; }
+.muted { font-size: 11px; }
+
+.file-row-compact { padding: 6px 8px; border-radius: 10px; }
+.file-name { font-size: 13px; max-width: 360px; }
+
+.btn-sm { padding: 5px 9px; font-size: 12px; border-radius: 8px; }
+.btn-ghost.btn-sm, .btn-danger.btn-sm, .btn-primary.btn-sm { line-height: 1.1; }
+
+/* 输入框也更小一点 */
+.form-grid-compact label { font-size: 11px; }
+.form-grid-compact input[type='text'],
+.form-grid-compact input[type='number'],
+.form-grid-compact textarea {
+  padding: 8px 9px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+    </style>
+
+    <script>
+      ;(function () {
+        const input = document.getElementById('companySearch')
+        const rows = Array.from(document.querySelectorAll('.company-row'))
+        const empty = document.getElementById('companyEmpty')
+        const shownEl = document.getElementById('companyCountShown')
+
+        function apply() {
+          const q = (input.value || '').trim().toLowerCase()
+          let shown = 0
+          rows.forEach((tr) => {
+            const name = tr.getAttribute('data-company') || ''
+            const ok = !q || name.includes(q)
+            tr.style.display = ok ? '' : 'none'
+            if (ok) shown++
+          })
+          if (shownEl) shownEl.textContent = String(shown)
+          if (empty)
+            empty.style.display = rows.length > 0 && shown === 0 ? '' : 'none'
+        }
+
+        if (input) {
           apply()
+          input.addEventListener('input', apply)
+          input.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+              input.value = ''
+              apply()
+            }
+          })
+        }
+      })()
+      // ===== 平台附加区折叠 + 单行/多行切换 =====
+    ;(function () {
+      const btn = document.getElementById('toggleExtrasBtn')
+      const body = document.getElementById('extrasBody')
+      if (btn && body) {
+        btn.addEventListener('click', () => {
+          const open = body.style.display !== 'none'
+          body.style.display = open ? 'none' : ''
+          btn.textContent = open ? '展开' : '收起'
+        })
+      }
+
+      // 新增：长文本展开（content_long 覆盖 content）
+      const extras = document.getElementById('platformExtras')
+      if (!extras) return
+
+      extras.addEventListener('click', (e) => {
+        const t = e.target
+        if (!(t instanceof HTMLElement)) return
+
+        // 新增区：写长文本
+        if (t.hasAttribute('data-expand')) {
+          const wantOpen = t.getAttribute('data-expand') === '1'
+          const longbox = extras.querySelector('.longbox')
+          if (longbox) longbox.style.display = wantOpen ? '' : 'none'
+        }
+
+        // 列表：多行编辑
+        if (t.hasAttribute('data-toggle-textarea')) {
+          const wantOpen = t.getAttribute('data-toggle-textarea') === '1'
+          const item = t.closest('.item')
+          if (!item) return
+          const box = item.querySelector('.item-longbox')
+          if (box) box.style.display = wantOpen ? '' : 'none'
         }
       })
-    }
-  })()
-</script>
 
-{% endblock %}
+      // 提交时：如果填了 content_long，就用它覆盖 content
+      const addForm = extras.querySelector('form.tool-form')
+      if (addForm) {
+        addForm.addEventListener('submit', () => {
+          const longEl = addForm.querySelector('textarea[name="content_long"]')
+          const shortEl = addForm.querySelector('input[name="content"]')
+          if (longEl && shortEl && (longEl.value || '').trim()) {
+            shortEl.value = longEl.value.trim()
+          }
+        })
+      }
+    })()
+    ;(function () {
+  // 通用 data-toggle="#id" 切换显示
+  document.addEventListener('click', function (e) {
+    const t = e.target
+    if (!(t instanceof HTMLElement)) return
+    const sel = t.getAttribute('data-toggle')
+    if (!sel) return
+    const el = document.querySelector(sel)
+    if (!el) return
+    el.style.display = el.style.display === 'none' ? '' : 'none'
+  })
+
+  // 新增时：如果填了 content_long -> 覆盖 content
+  const extras = document.getElementById('platformExtras')
+  if (!extras) return
+  const addForm = extras.querySelector('#addTextBox form')
+  if (addForm) {
+    addForm.addEventListener('submit', () => {
+      const longEl = addForm.querySelector('textarea[name="content_long"]')
+      const shortEl = addForm.querySelector('input[name="content"]')
+      if (longEl && shortEl && (longEl.value || '').trim()) {
+        shortEl.value = longEl.value.trim()
+      }
+    })
+  }
+})()
+    </script>
+
+    {% endblock %}
+  </div>
+</div>

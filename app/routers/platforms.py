@@ -1,28 +1,21 @@
 # app/routers/platforms.py
-import os, uuid
+import os
+import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from fastapi import APIRouter, Request, UploadFile, File, Form
 from fastapi.responses import RedirectResponse, FileResponse, HTMLResponse
 from sqlalchemy import select, insert, update, and_, text
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
+from starlette.responses import Response  # 可选
 
-# ✅ 这里按你项目实际来：你之前 ImportError 说明 app.db 里可能不是 db
-# 如果你 app.db 里导出的是 engine，就用 engine 包一下 connect()
-try:
-    from app.db import db
-except Exception:
-    from app.db import engine
 
-    class _DB:
-        def connect(self):
-            return engine.connect()
-    db = _DB()
-
+from app.db import db
 from app.db_tables import (
     documents,
-    platform_text_fields,
     platform_documents,
+    platform_text_fields,
 )
 
 router = APIRouter(prefix="/ui")
@@ -30,8 +23,8 @@ router = APIRouter(prefix="/ui")
 UPLOAD_ROOT = "uploads"
 ALLOWED_EXT = {".doc", ".docx", ".pdf", ".png", ".jpg", ".jpeg", ".webp"}
 
-# ✅ 你创建的“虚拟公司”ID写在这里
-PLATFORM_GROUP_COMPANY_ID = 9999  # TODO: 改成你的 __PLATFORM_GROUP__ 那条 companies.id
+# ✅ 你的虚拟公司 __PLATFORM_GROUP__ 的真实 id
+PLATFORM_GROUP_COMPANY_ID = 85
 
 
 def safe_filename(name: str) -> str:
@@ -46,17 +39,18 @@ def platform_key_of(name: str) -> str:
     return (name or "").strip().lower()
 
 
-def get_or_create_anchor_cp(conn, platform_name: str) -> Dict[str, Any]:
+def get_or_create_anchor_cp(conn, platform_name: str) -> int:
     """
-    无论该平台是否有真实公司，都保证返回一个 anchor company_platforms 记录：
-    - company_id = PLATFORM_GROUP_COMPANY_ID
-    - platform_name = platform_name
+    保证平台聚合页一定有一个“锚点 company_platforms”记录：
+    company_id = PLATFORM_GROUP_COMPANY_ID(85)
+    platform_name = platform_name
+    返回 anchor_platform_id = cp.id
     """
     pkey = platform_key_of(platform_name)
 
     row = conn.execute(
         text("""
-            SELECT id AS platform_id, company_id
+            SELECT id
             FROM company_platforms
             WHERE company_id = :cid
               AND LOWER(TRIM(platform_name)) = :pkey
@@ -67,10 +61,8 @@ def get_or_create_anchor_cp(conn, platform_name: str) -> Dict[str, Any]:
     ).mappings().first()
 
     if row:
-        return {"company_id": int(row["company_id"]), "platform_id": int(row["platform_id"])}
+        return int(row["id"])
 
-    # ✅ 不存在就创建一个“锚点平台记录”
-    # 注意：如果你 company_platforms 有更多 NOT NULL 字段，你在这里补默认值
     res = conn.execute(
         text("""
             INSERT INTO company_platforms (company_id, platform_name, created_at, updated_at)
@@ -79,9 +71,7 @@ def get_or_create_anchor_cp(conn, platform_name: str) -> Dict[str, Any]:
         {"cid": PLATFORM_GROUP_COMPANY_ID, "pname": platform_name},
     )
     conn.commit()
-
-    platform_id = res.lastrowid
-    return {"company_id": PLATFORM_GROUP_COMPANY_ID, "platform_id": int(platform_id)}
+    return int(res.lastrowid)
 
 
 # =========================
@@ -92,7 +82,6 @@ def get_or_create_anchor_cp(conn, platform_name: str) -> Dict[str, Any]:
 def platform_detail_agg(request: Request, platform_name: str):
     pkey = platform_key_of(platform_name)
 
-    # 1) 聚合公司列表：排除虚拟公司
     q_rows = text("""
         SELECT
             cp.id AS cp_id,
@@ -108,28 +97,32 @@ def platform_detail_agg(request: Request, platform_name: str):
         JOIN companies c ON c.id = cp.company_id
         WHERE LOWER(TRIM(cp.platform_name)) = :pkey
           AND cp.company_id <> :fake_cid
-        ORDER BY COALESCE(cp.updated_at, cp.created_at) DESC, cp.id DESC
+        ORDER BY cp.updated_at DESC, cp.id DESC
     """)
 
     with db.connect() as conn:
-        # ✅ 永远有 anchor（即便 rows=0）
-        anchor = get_or_create_anchor_cp(conn, platform_name)
+        anchor_platform_id = get_or_create_anchor_cp(conn, platform_name)
 
-        rows = conn.execute(q_rows, {"pkey": pkey, "fake_cid": PLATFORM_GROUP_COMPANY_ID}).mappings().all()
+        rows = conn.execute(
+            q_rows, {"pkey": pkey, "fake_cid": PLATFORM_GROUP_COMPANY_ID}
+        ).mappings().all()
 
-        # 2) 顶部文本：复用 platform_text_fields，挂在 anchor 上
+        # ✅ 平台聚合文本：复用 platform_text_fields
         q_fields = (
             select(platform_text_fields)
             .where(and_(
-                platform_text_fields.c.company_id == anchor["company_id"],
-                platform_text_fields.c.platform_id == anchor["platform_id"],
+                platform_text_fields.c.company_id == PLATFORM_GROUP_COMPANY_ID,
+                platform_text_fields.c.platform_id == anchor_platform_id,
                 platform_text_fields.c.is_deleted == 0,
             ))
-            .order_by(platform_text_fields.c.sort_no.asc(), platform_text_fields.c.id.asc())
+            .order_by(
+                platform_text_fields.c.sort_no.asc(),
+                platform_text_fields.c.id.asc(),
+            )
         )
         fields = conn.execute(q_fields).mappings().all()
 
-        # 3) 顶部文件：复用 platform_documents + documents，用 doc_role='group'
+        # ✅ 平台聚合文件：复用 platform_documents + documents
         q_files = (
             select(
                 platform_documents.c.id.label("pd_id"),
@@ -139,13 +132,16 @@ def platform_detail_agg(request: Request, platform_name: str):
                 documents.c.file_size,
                 documents.c.created_at,
             )
-            .select_from(platform_documents.join(documents, platform_documents.c.document_id == documents.c.id))
+            .select_from(
+                platform_documents.join(documents, platform_documents.c.document_id == documents.c.id)
+            )
             .where(and_(
-                platform_documents.c.company_id == anchor["company_id"],
-                platform_documents.c.platform_id == anchor["platform_id"],
-                platform_documents.c.doc_role == "group",
+                platform_documents.c.company_id == PLATFORM_GROUP_COMPANY_ID,
+                platform_documents.c.platform_id == anchor_platform_id,
+                platform_documents.c.doc_role == "file",          # ✅ 用库里最常见的值
                 platform_documents.c.is_deleted == 0,
                 documents.c.is_deleted == 0,
+                documents.c.group_key.like("platform_group:%"),   # ✅ 用 group_key 区分聚合文件
             ))
             .order_by(platform_documents.c.id.desc())
         )
@@ -160,13 +156,13 @@ def platform_detail_agg(request: Request, platform_name: str):
             "rows": rows,
             "fields": fields,
             "files": files,
-            "can_upload": True,  # ✅ 现在永远能上传/新增
+            "anchor_platform_id": anchor_platform_id,  # 可选：调试用
         },
     )
 
 
 # =========================
-# 平台聚合页：文本 add/update/delete
+# 平台聚合页：文本框 add/update/delete（复用 platform_text_fields）
 # =========================
 @router.post("/platforms/{platform_name}/text/add", name="platform_group_text_add")
 async def platform_group_text_add(
@@ -182,12 +178,11 @@ async def platform_group_text_add(
         return RedirectResponse(f"/ui/platforms/{platform_name}?msg=内容不能为空", status_code=303)
 
     with db.connect() as conn:
-        anchor = get_or_create_anchor_cp(conn, platform_name)
-
+        anchor_platform_id = get_or_create_anchor_cp(conn, platform_name)
         conn.execute(
             insert(platform_text_fields).values(
-                company_id=anchor["company_id"],
-                platform_id=anchor["platform_id"],
+                company_id=PLATFORM_GROUP_COMPANY_ID,
+                platform_id=anchor_platform_id,
                 label=label_s[:80],
                 content=content_s,
                 sort_no=int(sort_no or 0),
@@ -214,14 +209,13 @@ async def platform_group_text_update(
     content_s = (content or "").strip()
 
     with db.connect() as conn:
-        anchor = get_or_create_anchor_cp(conn, platform_name)
-
+        anchor_platform_id = get_or_create_anchor_cp(conn, platform_name)
         conn.execute(
             update(platform_text_fields)
             .where(and_(
                 platform_text_fields.c.id == field_id,
-                platform_text_fields.c.company_id == anchor["company_id"],
-                platform_text_fields.c.platform_id == anchor["platform_id"],
+                platform_text_fields.c.company_id == PLATFORM_GROUP_COMPANY_ID,
+                platform_text_fields.c.platform_id == anchor_platform_id,
                 platform_text_fields.c.is_deleted == 0,
             ))
             .values(
@@ -239,25 +233,23 @@ async def platform_group_text_update(
 @router.post("/platforms/{platform_name}/text/{field_id}/delete", name="platform_group_text_delete")
 def platform_group_text_delete(request: Request, platform_name: str, field_id: int):
     with db.connect() as conn:
-        anchor = get_or_create_anchor_cp(conn, platform_name)
-
+        anchor_platform_id = get_or_create_anchor_cp(conn, platform_name)
         conn.execute(
             update(platform_text_fields)
             .where(and_(
                 platform_text_fields.c.id == field_id,
-                platform_text_fields.c.company_id == anchor["company_id"],
-                platform_text_fields.c.platform_id == anchor["platform_id"],
+                platform_text_fields.c.company_id == PLATFORM_GROUP_COMPANY_ID,
+                platform_text_fields.c.platform_id == anchor_platform_id,
                 platform_text_fields.c.is_deleted == 0,
             ))
             .values(is_deleted=1, deleted_at=datetime.utcnow(), updated_at=datetime.utcnow())
         )
         conn.commit()
-
     return RedirectResponse(f"/ui/platforms/{platform_name}", status_code=303)
 
 
 # =========================
-# 平台聚合页：文件上传/删除（doc_role='group'）
+# 平台聚合页：文件上传/删除（复用 documents + platform_documents）
 # =========================
 @router.post("/platforms/{platform_name}/files/upload", name="platform_group_file_upload")
 async def platform_group_file_upload(
@@ -270,11 +262,8 @@ async def platform_group_file_upload(
     if ext not in ALLOWED_EXT:
         return RedirectResponse(f"/ui/platforms/{platform_name}?msg=不支持的文件类型", status_code=303)
 
-    data = await file.read()
-    if not data:
-        return RedirectResponse(f"/ui/platforms/{platform_name}?msg=空文件", status_code=303)
-
     pkey = platform_key_of(platform_name)
+
     rel_dir = os.path.join("platform_groups", pkey)
     abs_dir = os.path.join(UPLOAD_ROOT, rel_dir)
     os.makedirs(abs_dir, exist_ok=True)
@@ -283,6 +272,7 @@ async def platform_group_file_upload(
     abs_path = os.path.join(abs_dir, new_name)
     rel_path = os.path.join(rel_dir, new_name).replace("\\", "/")
 
+    data = await file.read()
     with open(abs_path, "wb") as f:
         f.write(data)
 
@@ -291,16 +281,18 @@ async def platform_group_file_upload(
     user_id = getattr(request.state, "user_id", None) or 1
 
     with db.connect() as conn:
-        anchor = get_or_create_anchor_cp(conn, platform_name)
+        # 你现在已经有虚拟公司 __PLATFORM_GROUP__ = id 85
+        anchor_platform_id = get_or_create_anchor_cp(conn, platform_name)
 
+        # 1) 写 documents（documents 表有 updated_at，所以这里保留）
         res = conn.execute(
             insert(documents).values(
-                company_id=anchor["company_id"],  # ✅ 外键合法
+                company_id=PLATFORM_GROUP_COMPANY_ID,      # 85
                 uploaded_by=user_id,
                 group_key=f"platform_group:{pkey}",
                 file_type="platform_group_file",
                 category="platform",
-                title=f"Platform({platform_name}) Group File",
+                title=f"Platform({platform_name}) File",
                 original_filename=filename,
                 storage_path=rel_path,
                 mime_type=mime,
@@ -313,59 +305,96 @@ async def platform_group_file_upload(
         )
         doc_id = res.lastrowid
 
+        # 2) 绑到 platform_documents（⚠️关键：不要写 updated_at）
         conn.execute(
             insert(platform_documents).values(
-                company_id=anchor["company_id"],
-                platform_id=anchor["platform_id"],
+                company_id=PLATFORM_GROUP_COMPANY_ID,  # 85
+                platform_id=anchor_platform_id,
                 document_id=doc_id,
-                doc_role="group",  # ✅ 平台聚合级
+                doc_role="file",          # 用你库里肯定允许的值
                 is_deleted=0,
                 created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                # ✅ 不要写 updated_at（你表里没有）
             )
         )
+
         conn.commit()
 
     return RedirectResponse(f"/ui/platforms/{platform_name}", status_code=303)
 
-
 @router.post("/platforms/{platform_name}/files/{pd_id}/delete", name="platform_group_file_delete")
 def platform_group_file_delete(request: Request, platform_name: str, pd_id: int):
     with db.connect() as conn:
-        anchor = get_or_create_anchor_cp(conn, platform_name)
+        anchor_platform_id = get_or_create_anchor_cp(conn, platform_name)
 
         conn.execute(
             update(platform_documents)
             .where(and_(
                 platform_documents.c.id == pd_id,
-                platform_documents.c.company_id == anchor["company_id"],
-                platform_documents.c.platform_id == anchor["platform_id"],
-                platform_documents.c.doc_role == "group",
+                platform_documents.c.company_id == PLATFORM_GROUP_COMPANY_ID,
+                platform_documents.c.platform_id == anchor_platform_id,
+                platform_documents.c.doc_role == "file",
                 platform_documents.c.is_deleted == 0,
             ))
-            .values(is_deleted=1, deleted_at=datetime.utcnow(), updated_at=datetime.utcnow())
+            .values(
+                is_deleted=1,
+                deleted_at=datetime.utcnow(),
+                # ✅ 不要 updated_at
+            )
         )
         conn.commit()
 
     return RedirectResponse(f"/ui/platforms/{platform_name}", status_code=303)
-
-
-# =========================
-# 复用 documents：下载/预览（你已有就保留你已有的）
-# =========================
-@router.get("/docs/{doc_id}/download")
-def download_doc(doc_id: int):
+@router.get("/docs/{doc_id}/download", name="ui_doc_download")
+def ui_doc_download(doc_id: int):
     with db.connect() as conn:
         d = conn.execute(
             select(documents).where(and_(documents.c.id == doc_id, documents.c.is_deleted == 0))
         ).mappings().first()
 
     if not d:
-        return RedirectResponse("/ui", status_code=303)
+        return HTMLResponse("Not Found", status_code=404)
 
     abs_path = os.path.join(UPLOAD_ROOT, d["storage_path"])
+    if not os.path.exists(abs_path):
+        return HTMLResponse("File Missing", status_code=404)
+
     return FileResponse(
         abs_path,
         filename=d["original_filename"],
         media_type=d["mime_type"] or "application/octet-stream",
+    )
+
+
+@router.get("/docs/{doc_id}/preview", name="ui_doc_preview")
+def ui_doc_preview(request: Request, doc_id: int):
+    with db.connect() as conn:
+        d = conn.execute(
+            select(documents).where(and_(documents.c.id == doc_id, documents.c.is_deleted == 0))
+        ).mappings().first()
+
+    if not d:
+        return HTMLResponse("Not Found", status_code=404)
+
+    abs_path = os.path.join(UPLOAD_ROOT, d["storage_path"])
+    if not os.path.exists(abs_path):
+        return HTMLResponse("File Missing", status_code=404)
+
+    mime = (d["mime_type"] or "application/octet-stream").lower()
+    filename = d["original_filename"] or "file"
+    ext = ext_of(filename)
+
+    # ✅ 只有这些类型适合 inline 预览
+    can_inline = mime.startswith("image/") or mime == "application/pdf" or ext == ".pdf"
+
+    if not can_inline:
+        # 其它类型（doc/docx等）浏览器没法直接预览：跳下载
+        return RedirectResponse(request.url_for("ui_doc_download", doc_id=doc_id), status_code=302)
+
+    # ✅ inline 预览：关键是 headers 里 Content-Disposition: inline
+    return FileResponse(
+        abs_path,
+        media_type=mime,
+        filename=filename,
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )

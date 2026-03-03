@@ -460,6 +460,30 @@
           </select>
         </div>
 
+        <div>
+          <label>银行卡号</label>
+          <input
+            type="text"
+            name="bank_card_no"
+            autocomplete="off"
+            inputmode="text"
+            value="{{ platform.bank_card_no or '' }}"
+            {% if not can_edit %}disabled{% endif %}
+          />
+        </div>
+
+        <div>
+          <label>银行卡所属</label>
+          <input
+            type="text"
+            name="bank_card_owner"
+            autocomplete="off"
+            inputmode="text"
+            value="{{ platform.bank_card_owner or '' }}"
+            {% if not can_edit %}disabled{% endif %}
+          />
+        </div>
+
         <div style="grid-column: 1 / -1">
           <label>备注</label>
           <textarea name="notes" rows="1" {% if not can_edit %}disabled{% endif %}>{{ platform.notes or '' }}</textarea>

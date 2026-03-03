@@ -277,13 +277,13 @@ stat.row_cnt and stat.row_cnt > 0 %}
 
 <div class="section-gap"></div>
 
-{# ==================== 收款渠道（格式与上面一致 + 兼容 key）
+{# ==================== 收款平台（格式与上面一致 + 兼容 key）
 ==================== #}
 <div class="card">
   <div class="card-sticky">
     <div class="card-header">
       <div class="card-title">
-        收款渠道
+        收款平台
         <span class="count-badge" id="payCountDisplay"
           >{{ payment_list|length }}</span
         >
@@ -340,22 +340,7 @@ stat.row_cnt and stat.row_cnt > 0 %}
           <td>
             <a href="/ui/platforms/{{ url_key }}" class="platform-item">
               <div class="platform-icon pay-icon">{{ pay.name[0]|upper }}</div>
-              <div>
-                <div>{{ pay.name }}</div>
-                {% if pay.link %}
-                <div
-                  class="html-link"
-                  style="
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-top: 2px;
-                    line-height: 1.4;
-                  "
-                >
-                  {{ pay.link|safe }}
-                </div>
-                {% endif %}
-              </div>
+              {{ pay.name }}
             </a>
           </td>
 

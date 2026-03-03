@@ -47,6 +47,7 @@ from app.services.purge_service import purge_loop
 from app.routers.admin import router as admin_router
 from app.routers.tickets import router as tickets_router
 from app.routers.ui_tickets import router as ui_tickets_router
+from app.routers import platforms
 
 
 
@@ -56,10 +57,7 @@ app.state.templates = Jinja2Templates(directory="app/templates")
 @app.on_event("startup")
 async def _startup_purge_task():
     asyncio.create_task(purge_loop())
-from app.routers import platforms as ui_platforms  # ✅正确：导入 app/ui/routes/platforms.py
-app.include_router(ui_platforms.router)
-# # ✅ 静态资源（可选）
-# app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.include_router(platforms.router)
 app.include_router(tickets_router)
 app.include_router(ui_tickets_router)
 # =========================================================
@@ -195,6 +193,8 @@ class PlatformCreate(BaseModel):
     platform_name: str = Field(..., max_length=100)
     store_url: Optional[str] = Field(None, max_length=500)
     domain: Optional[str] = Field(None, max_length=255)
+    bank_card_no: Optional[str] = Field(None, max_length=50)
+    bank_card_owner: Optional[str] = Field(None, max_length=50)
 
 
 class PlatformPatch(BaseModel):
@@ -202,6 +202,8 @@ class PlatformPatch(BaseModel):
     platform_name: Optional[str] = Field(None, max_length=100)
     store_url: Optional[str] = Field(None, max_length=500)
     domain: Optional[str] = Field(None, max_length=255)
+    bank_card_no: Optional[str] = Field(None, max_length=50)
+    bank_card_owner: Optional[str] = Field(None, max_length=50)
 
 
 # ---------- Company <-> Legal Person Binding ----------
@@ -776,12 +778,25 @@ def list_platforms(company_id: int) -> Dict[str, Any]:
         if not c:
             raise HTTPException(status_code=404, detail="Company not found")
 
-        rows = conn.execute(text("""
-            SELECT id, company_id, platform_name, store_url, domain, created_at
-            FROM company_platforms
-            WHERE company_id=:company_id
-            ORDER BY id DESC
-        """), {"company_id": company_id}).mappings().all()
+        rows = conn.execute(
+            text(
+                """
+                SELECT
+                    id,
+                    company_id,
+                    platform_name,
+                    store_url,
+                    domain,
+                    bank_card_no,
+                    bank_card_owner,
+                    created_at
+                FROM company_platforms
+                WHERE company_id = :company_id
+                ORDER BY id DESC
+                """
+            ),
+            {"company_id": company_id},
+        ).mappings().all()
 
     return {"items": [dict(r) for r in rows]}
 

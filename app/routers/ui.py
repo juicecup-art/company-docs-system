@@ -2963,23 +2963,12 @@ def ui_platforms(request: Request):
 
     db_stats = {r["platform_key"]: dict(r) for r in rows}
 
-    payment_list = [
-        {"name": "Skyee", "db_key": "skyee", "link": '<a href="https://www.skyee360.com/invite?aff=LUVIP" target="_blank">Skyee注册链接</a>'},
-        {"name": "Payoneer (P卡)", "db_key": "payoneer", "link": '公司注册找经理<br />法人：<a href="https://paynr.co/4qbAuHq" target="_blank">注册</a> | <a href="https://login.payoneer.com/" target="_blank">登录</a>'},
-        {"name": "WorldFirst (万里汇)", "db_key": "worldfirst", "link": '<a href="https://portal.worldfirst.com/register?region=NL&default_source=SA175" target="_blank">注册 (SA175)</a>'},
-        {"name": "Pingpong", "db_key": "pingpong", "link": '<a href="https://business.pingpongx.com/entrance/signup?inviteCode=ZZzhangxj" target="_blank">注册 (ZZzhangxj)</a>'},
-        {"name": "Airwallex (空中云汇)", "db_key": "airwallex", "link": '<a href="https://www.airwallex.com/app/signup?so=XKzzKwoFztHNk82F--HR002506" target="_blank">注册</a> | <a href="https://www.airwallex.com/app/login" target="_blank">登录</a>'},
-        {"name": "XGD (paykka)", "db_key": "paykka", "link": '<a href="https://client.eu.paykka.com/login" target="_blank">登录</a>'},
-        {"name": "Wise", "db_key": "wise", "link": '<a href="https://wise.com" target="_blank">官网</a>'},
-        {"name": "Qonto", "db_key": "qonto", "link": "Qonto"},
-    ]
 
     return templates.TemplateResponse(
         "platforms_index.html",
         {
             **_base_ctx(request, current_user, "platforms"),
             "db_stats": db_stats, # 传字典给前端
-            "payment_list": payment_list,
         },
     )
 
@@ -3825,13 +3814,27 @@ async def ui_company_platform_detail(request: Request, company_id: int, platform
         ).mappings().first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
-
+        
+        # platform字段
         platform = conn.execute(
             text(
                 """
                 SELECT
-                    id, company_id, platform_name, store_url, domain, created_at,
-                    zini_ip, platform_email, progress, status, owner_user_id, notes, updated_at,
+                    id,
+                    company_id,
+                    platform_name,
+                    store_url,
+                    domain,
+                    bank_card_no,
+                    bank_card_owner,
+                    created_at,
+                    zini_ip,
+                    platform_email,
+                    progress,
+                    status,
+                    owner_user_id,
+                    notes,
+                    updated_at,
                     image_path
                 FROM company_platforms
                 WHERE id=:pid AND company_id=:cid
@@ -3840,6 +3843,7 @@ async def ui_company_platform_detail(request: Request, company_id: int, platform
             ),
             {"pid": platform_id, "cid": company_id},
         ).mappings().first()
+
         if not platform:
             raise HTTPException(status_code=404, detail="Platform not found")
 

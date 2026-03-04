@@ -237,6 +237,9 @@
     border:1px solid rgba(15,23,42,.06);
     background:#fff;
   }
+  .thumb{
+    cursor:zoom-in;
+  }
   .image-actions{
     margin-top:8px;
     display:flex;
@@ -367,7 +370,46 @@
   max-width:200px;
   color: rgba(15, 23, 42, 0.92);
 }
+/* ✅ 可折叠多行输入（默认收起，点一下展开） */
+.ta-collapsible{
+  width: 100%;
+  min-height: 34px;       /* 收起时高度 */
+  height: 34px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  resize: vertical;
+  overflow: hidden;       /* 收起时隐藏溢出 */
+  transition: height .15s ease, box-shadow .15s ease, border-color .15s ease;
+  white-space: pre-wrap;  /* 保留换行（显示时） */
+}
 
+.ta-collapsible.is-collapsed{
+  height: 34px;
+}
+
+.ta-collapsible.is-expanded{
+  height: 110px;          /* 展开时默认高度（你可以调） */
+  overflow: auto;
+}
+
+/* 右侧小按钮 */
+.ta-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.72);
+}
+.ta-toggle:hover{
+  background: rgba(37, 99, 235, 0.06);
+  border-color: rgba(37, 99, 235, 0.18);
+}
 </style>
 
 <div class="card">
@@ -425,14 +467,38 @@
 
         <div>
           <label>平台邮箱</label>
-          <input name="platform_email" value="{{ platform.platform_email or '' }}" placeholder="xxx@domain.com"
-            {% if not can_edit %}disabled{% endif %}/>
+        
+          <div style="display:flex; gap:8px; align-items:center;">
+            <textarea
+              name="platform_email"
+              class="ta-collapsible is-collapsed"
+              rows="1"
+              placeholder="一行一个邮箱 / 可换行"
+              {% if not can_edit %}disabled{% endif %}
+            >{{ platform.platform_email or '' }}</textarea>
+        
+            <button type="button" class="ta-toggle" data-ta-toggle>
+              展开
+            </button>
+          </div>
         </div>
 
         <div>
           <label>进度</label>
-          <input name="progress" value="{{ platform.progress or '' }}" placeholder="未完成"
-            {% if not can_edit %}disabled{% endif %}/>
+        
+          <div style="display:flex; gap:8px; align-items:center;">
+            <textarea
+              name="progress"
+              class="ta-collapsible is-collapsed"
+              rows="1"
+              placeholder="可多行记录进度（支持换行）"
+              {% if not can_edit %}disabled{% endif %}
+            >{{ platform.progress or '' }}</textarea>
+        
+            <button type="button" class="ta-toggle" data-ta-toggle>
+              展开
+            </button>
+          </div>
         </div>
 
         <div>
@@ -484,6 +550,54 @@
           />
         </div>
 
+        <div>
+          <label>银行卡图片</label>
+          {% if can_edit %}
+          <div style="margin-top: 4px; display: flex; gap: 8px; align-items: center;">
+            <input type="file" name="file" accept="image/*" form="bank-card-image-upload-form" />
+            <button class="btn" type="submit" form="bank-card-image-upload-form">上传</button>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if platform.bank_card_image %}
+        <div style="grid-column: 1 / -1; margin-top: 6px">
+          <div style="position: relative; display: inline-block;">
+            <img
+              src="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image"
+              data-full="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image"
+              alt="银行卡图片"
+              class="thumb"
+              title="点击放大"
+              style="max-width: 260px; border-radius: 10px; border: 1px solid var(--border);"
+            />
+            {% if can_edit %}
+            <div style="position: absolute; top: -8px; right: -8px;">
+              <button
+                type="submit"
+                form="bank-card-image-delete-form"
+                onclick="return confirm('是否删除此图片？')"
+                style="
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 999px;
+                  border: none;
+                  background: rgba(0,0,0,0.7);
+                  color: #fff;
+                  font-size: 12px;
+                  line-height: 1;
+                  cursor: pointer;
+                "
+              >
+                ×
+              </button>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+
         <div style="grid-column: 1 / -1">
           <label>备注</label>
           <textarea name="notes" rows="1" {% if not can_edit %}disabled{% endif %}>{{ platform.notes or '' }}</textarea>
@@ -496,6 +610,18 @@
         </div>
       {% endif %}
     </form>
+
+    <form
+      id="bank-card-image-upload-form"
+      method="post"
+      action="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image/upload"
+      enctype="multipart/form-data"
+    ></form>
+    <form
+      id="bank-card-image-delete-form"
+      method="post"
+      action="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image/delete"
+    ></form>
   </div>
 
 <!-- 顶部：精简工具栏（上下区域里的第一排：文档上传 + 图片上传） -->
@@ -726,5 +852,40 @@
     </div>
   </div>
 </div>
+<script>
+  // ✅ 折叠/展开 textarea：按钮切换 + 聚焦自动展开 + 失焦自动收起（可按需删掉失焦收起）
+  (function () {
+    function setExpanded(ta, expanded) {
+      if (!ta) return;
+      ta.classList.toggle("is-expanded", expanded);
+      ta.classList.toggle("is-collapsed", !expanded);
+
+      const btn = ta.parentElement && ta.parentElement.querySelector("[data-ta-toggle]");
+      if (btn) btn.textContent = expanded ? "收起" : "展开";
+
+      if (expanded) {
+        // 让光标可用，顺便滚到末尾
+        try { ta.focus(); } catch(e){}
+      }
+    }
+
+    document.querySelectorAll("[data-ta-toggle]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const ta = btn.parentElement && btn.parentElement.querySelector("textarea.ta-collapsible");
+        if (!ta) return;
+        const expanded = ta.classList.contains("is-expanded");
+        setExpanded(ta, !expanded);
+      });
+    });
+
+    // 点击/聚焦自动展开
+    document.querySelectorAll("textarea.ta-collapsible").forEach((ta) => {
+      ta.addEventListener("focus", () => setExpanded(ta, true));
+
+      // 失焦自动收起（如果你不想自动收起，删掉下面这一段）
+      ta.addEventListener("blur", () => setExpanded(ta, false));
+    });
+  })();
+</script>
 
 {% endblock %}

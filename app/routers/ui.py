@@ -3815,7 +3815,6 @@ async def ui_company_platform_detail(request: Request, company_id: int, platform
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
         
-        # platform字段
         platform = conn.execute(
             text(
                 """
@@ -3827,6 +3826,7 @@ async def ui_company_platform_detail(request: Request, company_id: int, platform
                     domain,
                     bank_card_no,
                     bank_card_owner,
+                    bank_card_image,
                     created_at,
                     zini_ip,
                     platform_email,
@@ -3898,6 +3898,8 @@ async def ui_company_platform_save(
     store_url: str = Form(""),
     domain: str = Form(""),
     zini_ip: str = Form(""),
+    bank_card_no: str = Form(""),
+    bank_card_owner: str = Form(""),
     platform_email: str = Form(""),
     progress: str = Form(""),
     status: str = Form(""),
@@ -3935,6 +3937,8 @@ async def ui_company_platform_save(
         "platform_name": (platform_name or "").strip() or None,
         "store_url": (store_url or "").strip() or None,
         "domain": (domain or "").strip() or None,
+        "bank_card_no": (bank_card_no or "").strip() or None,
+        "bank_card_owner": (bank_card_owner or "").strip() or None,
         "zini_ip": (zini_ip or "").strip() or None,
         "platform_email": (platform_email or "").strip() or None,
         "progress": _int_or_none(progress),
@@ -3973,6 +3977,161 @@ async def ui_company_platform_save(
 
     return RedirectResponse(url=f"/ui/companies/{company_id}/platforms/{platform_id}", status_code=302)
 
+
+@router.post("/companies/{company_id}/platforms/{platform_id}/bank-card-image")
+async def ui_company_platform_bank_image_upload(
+    request: Request,
+    company_id: int,
+    platform_id: int,
+    file: UploadFile = File(...),
+):
+    current_user = _get_current_user_for_ui(request)
+    if not current_user:
+        return _redirect("/ui/login")
+
+    if not _has_company_perm(current_user, company_id, need="edit"):
+        return _render_no_permission(
+            request,
+            current_user,
+            "companies",
+            "你没有权限编辑平台信息（需要“编辑”权限）。",
+            back_url=f"/ui/companies/{company_id}/platforms/{platform_id}",
+        )
+
+    if not file or not file.filename:
+        return RedirectResponse(
+            url=f"/ui/companies/{company_id}/platforms/{platform_id}",
+            status_code=HTTP_303_SEE_OTHER,
+        )
+
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    filename = f"bankcard_{company_id}_{platform_id}_{uuid.uuid4().hex}{ext}"
+    upload_dir = os.path.abspath(os.path.join(os.getcwd(), "uploads", "bankcards"))
+    os.makedirs(upload_dir, exist_ok=True)
+    dest_path = os.path.join(upload_dir, filename)
+
+    with open(dest_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    rel_path = os.path.relpath(dest_path, os.getcwd())
+
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                UPDATE company_platforms
+                SET bank_card_image=:p, updated_at=NOW()
+                WHERE id=:pid AND company_id=:cid
+                LIMIT 1
+                """
+            ),
+            {"p": rel_path, "pid": platform_id, "cid": company_id},
+        )
+
+    return RedirectResponse(
+        url=f"/ui/companies/{company_id}/platforms/{platform_id}",
+        status_code=HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/companies/{company_id}/platforms/{platform_id}/bank-card-image/delete")
+async def ui_company_platform_bank_image_delete(
+    request: Request,
+    company_id: int,
+    platform_id: int,
+):
+    current_user = _get_current_user_for_ui(request)
+    if not current_user:
+        return _redirect("/ui/login")
+
+    if not _has_company_perm(current_user, company_id, need="edit"):
+        return _render_no_permission(
+            request,
+            current_user,
+            "companies",
+            "你没有权限编辑平台信息（需要“编辑”权限）。",
+            back_url=f"/ui/companies/{company_id}/platforms/{platform_id}",
+        )
+
+    with engine.begin() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT bank_card_image
+                FROM company_platforms
+                WHERE id=:pid AND company_id=:cid
+                LIMIT 1
+                """
+            ),
+            {"pid": platform_id, "cid": company_id},
+        ).mappings().first()
+
+        if row and row["bank_card_image"]:
+            path = os.path.abspath(os.path.join(os.getcwd(), row["bank_card_image"]))
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except Exception:
+                pass
+
+        conn.execute(
+            text(
+                """
+                UPDATE company_platforms
+                SET bank_card_image=NULL, updated_at=NOW()
+                WHERE id=:pid AND company_id=:cid
+                LIMIT 1
+                """
+            ),
+            {"pid": platform_id, "cid": company_id},
+        )
+
+    return RedirectResponse(
+        url=f"/ui/companies/{company_id}/platforms/{platform_id}",
+        status_code=HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get("/companies/{company_id}/platforms/{platform_id}/bank-card-image")
+async def ui_company_platform_bank_image_file(
+    request: Request,
+    company_id: int,
+    platform_id: int,
+):
+    current_user = _get_current_user_for_ui(request)
+    if not current_user:
+        return _redirect("/ui/login")
+
+    if not _has_company_perm(current_user, company_id, need="view"):
+        return _render_no_permission(
+            request,
+            current_user,
+            "companies",
+            "你没有权限查看平台信息（需要“查看”权限）。",
+            back_url=f"/ui/companies/{company_id}/platforms/{platform_id}",
+        )
+
+    with engine.connect() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT bank_card_image
+                FROM company_platforms
+                WHERE id=:pid AND company_id=:cid
+                LIMIT 1
+                """
+            ),
+            {"pid": platform_id, "cid": company_id},
+        ).mappings().first()
+
+    if not row or not row["bank_card_image"]:
+        raise HTTPException(status_code=404, detail="No bank card image")
+
+    path = os.path.abspath(os.path.join(os.getcwd(), row["bank_card_image"]))
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="File missing")
+
+    return FileResponse(path)
 
 @router.post("/companies/{company_id}/platforms/{platform_id}/attach-doc")
 async def ui_platform_attach_doc(

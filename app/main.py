@@ -195,6 +195,7 @@ class PlatformCreate(BaseModel):
     domain: Optional[str] = Field(None, max_length=255)
     bank_card_no: Optional[str] = Field(None, max_length=50)
     bank_card_owner: Optional[str] = Field(None, max_length=50)
+    bank_card_image: Optional[str] = Field(None, max_length=255)
 
 
 class PlatformPatch(BaseModel):
@@ -204,6 +205,7 @@ class PlatformPatch(BaseModel):
     domain: Optional[str] = Field(None, max_length=255)
     bank_card_no: Optional[str] = Field(None, max_length=50)
     bank_card_owner: Optional[str] = Field(None, max_length=50)
+    bank_card_image: Optional[str] = Field(None, max_length=255)
 
 
 # ---------- Company <-> Legal Person Binding ----------
@@ -751,12 +753,31 @@ def create_platform(company_id: int, payload: PlatformCreate) -> Dict[str, Any]:
         if not c:
             raise HTTPException(status_code=404, detail="Company not found")
 
-        conn.execute(text("""
-            INSERT INTO company_platforms
-            (company_id, platform_name, store_url, domain, created_at)
-            VALUES
-            (:company_id, :platform_name, :store_url, :domain, NOW())
-        """), payload.model_dump())
+        conn.execute(
+            text(
+                """
+                INSERT INTO company_platforms
+                    (company_id,
+                     platform_name,
+                     store_url,
+                     domain,
+                     bank_card_no,
+                     bank_card_owner,
+                     bank_card_image,
+                     created_at)
+                VALUES
+                    (:company_id,
+                     :platform_name,
+                     :store_url,
+                     :domain,
+                     :bank_card_no,
+                     :bank_card_owner,
+                     :bank_card_image,
+                     NOW())
+                """
+            ),
+            payload.model_dump(),
+        )
 
         new_id = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
         row = conn.execute(
@@ -789,6 +810,7 @@ def list_platforms(company_id: int) -> Dict[str, Any]:
                     domain,
                     bank_card_no,
                     bank_card_owner,
+                    bank_card_image,
                     created_at
                 FROM company_platforms
                 WHERE company_id = :company_id

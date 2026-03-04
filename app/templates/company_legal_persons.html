@@ -126,10 +126,7 @@ block crumb %}公司 / 法人{% endblock %} {% block content %}{% import
         + 新建法人
       </a>
 
-      <!-- ✅ 全站统一返回样式（保留 muted） -->
-      <a class="back muted" href="/ui/companies/{{ company.id }}/edit"
-        >← 返回公司编辑</a
-      >
+      {{ ui.back('/ui/companies/' ~ company.id, '返回该公司') }}
     </div>
   </div>
 

@@ -1173,7 +1173,7 @@ def ui_ticket_change_status(request: Request, ticket_id: int, to_status: str = F
     if not current_user:
         return _redirect("/ui/login")
 
-    actor_id = int(current_user["id"])  # ✅ 放在 current_user 获取之后
+    actor_id = int(current_user["id"])
 
     to_s = (to_status or "").strip().upper()
     if not to_s:
@@ -1200,10 +1200,16 @@ def ui_ticket_change_status(request: Request, ticket_id: int, to_status: str = F
                 f"/ui/tickets/{ticket_id}",
             )
 
+        # 不允许无变化
+        if to_s == from_s:
+            return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)
+
+        # ✅ 保持你原来的流转限制
         allowed = STATUS_NEXT.get(from_s, [])
         if to_s not in allowed:
             return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)
 
+        # 1) 更新 tickets 状态
         conn.execute(
             text("""
                 UPDATE tickets
@@ -1217,6 +1223,27 @@ def ui_ticket_change_status(request: Request, ticket_id: int, to_status: str = F
             {"to_status": to_s, "id": ticket_id},
         )
 
+        # 2) ✅ 关键：写入 ticket_progress，让“仅更新状态”也出现在时间线
+        # attachments 存 "[]"
+        content_s = f"仅更新状态：{_status_zh(from_s)} → {_status_zh(to_s)}"
+        conn.execute(
+            text("""
+                INSERT INTO ticket_progress
+                  (ticket_id, user_id, content, old_status, new_status, attachments, created_at)
+                VALUES
+                  (:tid, :uid, :content, :old_s, :new_s, :atts, NOW())
+            """),
+            {
+                "tid": ticket_id,
+                "uid": actor_id,
+                "content": content_s,
+                "old_s": from_s or None,
+                "new_s": to_s or None,
+                "atts": "[]",
+            },
+        )
+
+        # 3) 你的 ticket_events 记录保持
         conn.execute(
             text("""
                 INSERT INTO ticket_events
@@ -1229,11 +1256,10 @@ def ui_ticket_change_status(request: Request, ticket_id: int, to_status: str = F
             {"tid": ticket_id, "uid": actor_id, "from_s": from_s, "to_s": to_s},
         )
 
-    # ✅ 通知放事务外（失败不影响主流程）
+    # 通知保持不动
     notify_ticket_status_changed(ticket_id, actor_id, from_s, to_s)
 
-    return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)
-# =========================================================
+    return RedirectResponse(url=f"/ui/tickets/{ticket_id}", status_code=302)# =========================================================
 # 8) Batch
 # =========================================================
 @router.post("/batch")

@@ -48,15 +48,36 @@
   .st-softblue{ background:#eff6ff; color:#2563eb; border-color:#dbeafe; }
 
   .meta-strip{
-    display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
-    gap:12px; margin:18px 0; padding:16px; background:#fff;
-    border:1px solid var(--border); border-radius:14px;
-  }
-  .meta-item-flat{
-    padding:8px 12px; border-left:3px solid; border-left-color:currentColor;
-    border-radius:10px; background:rgba(248,250,252,.5);
-  }
-  .meta-item-flat .label{ font-size:12px; color:var(--muted); margin-bottom:4px; }
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin:18px 0;
+  padding:16px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+}
+
+/* 默认：长字段可以伸展占空间 */
+.meta-item-flat{
+  padding:8px 12px;
+  border-left:3px solid;
+  border-left-color:currentColor;
+  border-radius:10px;
+  background:rgba(248,250,252,.5);
+
+  flex: 1 1 220px;     /* ✅ 让关联公司/平台/截止时间这种能填满 */
+  min-width: 220px;
+}
+
+/* ✅ 仅前三个：按内容宽度 */
+.meta-item-flat.compact{
+  flex: 0 0 auto;
+  width: fit-content;
+  min-width: unset;
+  max-width: 100%;
+}
+.meta-item-flat .label{ font-size:12px; color:var(--muted); margin-bottom:4px; }
   .meta-item-flat .value{ font-size:14px; font-weight:800; color:var(--text); line-height:1.2; }
 
   .ticket-main-grid{
@@ -328,6 +349,7 @@
   font-weight: 800;
 }
 .dd-placeholder{ color:#94a3b8; font-weight:700; }
+
 </style>
 
 <div class="ticket-container">
@@ -361,7 +383,7 @@
   </div>
 
   <div class="meta-strip">
-    <div class="meta-item-flat"
+    <div class="meta-item-flat compact"
       style="
         {% if pr=='URGENT' %}border-left-color:#fecaca;
         {% elif pr=='LOW' %}border-left-color:#e2e8f0;
@@ -381,29 +403,29 @@
       </div>
     </div>
 
-    <div class="meta-item-flat">
+    <div class="meta-item-flat compact">
       <div class="label">任务类型</div>
       <div class="value">{{ ticket.category or '-' }}</div>
     </div>
 
-    <div class="meta-item-flat st-softblue">
+    <div class="meta-item-flat st-softblue compact">
       <div class="label">当前状态</div>
       <div class="value">{{ st_info.label }}</div>
     </div>
 
+    <div class="meta-item-flat compact">
+      <div class="label">截止时间</div>
+      <div class="value">{{ ticket.due_at or '-' }}</div>
+    </div>
+    <div class="meta-item-flat compact">
+      <div class="label">平台</div>
+      <div class="value">{{ ticket.platform_name or '-' }}</div>
+    </div>
     <div class="meta-item-flat">
       <div class="label">关联公司</div>
       <div class="value">{{ ticket.company_name or '-' }}</div>
     </div>
-    <div class="meta-item-flat">
-      <div class="label">平台</div>
-      <div class="value">{{ ticket.platform_name or '-' }}</div>
-    </div>
-
-    <div class="meta-item-flat">
-      <div class="label">截止时间</div>
-      <div class="value">{{ ticket.due_at or '-' }}</div>
-    </div>
+    
   </div>
 
   <div class="ticket-main-grid">

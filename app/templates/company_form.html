@@ -166,7 +166,7 @@
       <h2>{% if mode=='edit' %}编辑公司{% else %}新建公司{% endif %}</h2>
     </div>
     <span class="head-spacer"></span>
-    {{ ui.back('/ui/companies', '返回列表') }}
+    {{ ui.back('/ui/companies/' ~ company.id, '返回该公司') }}
   </div>
 
   <p class="hint2" style="margin: 0 0 8px 0">
@@ -408,8 +408,8 @@
 
     <div class="actions">
       <button class="btn btn-primary" type="submit">保存所有信息</button>
-      <a class="back muted" href="/ui/companies" style="margin-left: 10px;">取消</a>
-      
+      <a class="back muted" href="/ui/companies/{{ company.id }}" style="margin-left: 10px;">取消</a>
+
       {% if mode=='edit' and company.deleted_at is not none %}
       <span class="pill" style="border-color: rgba(176, 0, 32, 0.25); color: #b00020; margin-left: auto;">
         已删除

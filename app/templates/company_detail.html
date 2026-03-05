@@ -470,10 +470,10 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   {% set ns = namespace(ecom=[], pay=[]) %}
   {% for p in platforms %}
     {% set pn = (p.payment_name or '')|lower %}
-    {% set n = (p.platform_name or '')|lower %}
+    {% set plat = (p.packing_name or p.platform_name or '')|lower %}
     {% if pn %}
       {% set _ = ns.pay.append(p) %}
-    {% elif n in pay_names %}
+    {% elif plat in pay_names %}
       {% set _ = ns.pay.append(p) %}
     {% else %}
       {% set _ = ns.ecom.append(p) %}
@@ -497,7 +497,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.platform_name }}</b>
+                <b>{{ p.packing_name or p.platform_name }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -542,7 +542,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.payment_name or p.platform_name }}</b>
+                <b>{{ p.payment_name or p.packing_name or p.platform_name }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>

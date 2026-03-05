@@ -470,10 +470,10 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   {% set ns = namespace(ecom=[], pay=[]) %}
   {% for p in platforms %}
     {% set pn = (p.payment_name or '')|lower %}
-    {% set plat = (p.packing_name or p.platform_name or '')|lower %}
+    {% set n = (p.platform_name or '')|lower %}
     {% if pn %}
       {% set _ = ns.pay.append(p) %}
-    {% elif plat in pay_names %}
+    {% elif n in pay_names %}
       {% set _ = ns.pay.append(p) %}
     {% else %}
       {% set _ = ns.ecom.append(p) %}
@@ -497,7 +497,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.packing_name or p.platform_name }}</b>
+                <b>{{ p.platform_name }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -542,7 +542,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.payment_name or p.packing_name or p.platform_name }}</b>
+                <b>{{ p.payment_name or p.platform_name }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -564,19 +564,30 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   <form id="addPlatformForm" method="post" action="/ui/companies/{{ company.id }}/platforms/add">
     <div class="panel" id="addPlatformPanel" style="display:none; margin-top: 12px;">
       <div class="form-grid">
-        <div>
+        <div style="position:relative;">
           <label>平台名称（platform_name） *</label>
-          <input name="platform_name" placeholder="例如 Amazon / eMAG / Shopify" required />
+          <input
+            name="platform_name"
+            id="platformNameInput"
+            placeholder="例如 Amazon / eMAG / Shopify"
+            autocomplete="off"
+            required
+          />
+          <ul
+            id="platformSuggestList"
+            class="dropdown-list"
+            style="position:absolute; z-index:50; left:0; right:0; top:100%; max-height:180px; overflow:auto; background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:4px; padding:4px 0; display:none;"
+          ></ul>
         </div>
 
         <div>
-          <label>店铺链接（store_url）</label>
-          <input name="store_url" placeholder="https://..." />
+          <label>平台邮箱（platform_email）</label>
+          <input name="platform_email" placeholder="例如 login@example.com" />
         </div>
 
         <div>
-          <label>域名（domain）</label>
-          <input name="domain" placeholder="example.com" />
+          <label>进度（progress，0-100）</label>
+          <input name="progress" placeholder="例如 0 / 50 / 100" />
         </div>
 
         <div style="display:flex; gap:10px; align-items:flex-end;">
@@ -590,9 +601,20 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   <form id="addPaymentForm" method="post" action="/ui/companies/{{ company.id }}/payments/add">
     <div class="panel" id="addPaymentPanel" style="display:none; margin-top: 12px;">
       <div class="form-grid">
-        <div>
+        <div style="position:relative;">
           <label>收款平台名称（payment_name） *</label>
-          <input name="payment_name" placeholder="例如 Skyee / Payoneer" required />
+          <input
+            name="payment_name"
+            id="paymentNameInput"
+            placeholder="例如 Skyee / Payoneer"
+            autocomplete="off"
+            required
+          />
+          <ul
+            id="paymentSuggestList"
+            class="dropdown-list"
+            style="position:absolute; z-index:50; left:0; right:0; top:100%; max-height:180px; overflow:auto; background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:4px; padding:4px 0; display:none;"
+          ></ul>
         </div>
 
         <div>
@@ -690,6 +712,68 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     const cancel = document.getElementById('btnCancelAddPlatform')
     const form = document.getElementById('addPlatformForm')
 
+    function attachSuggest(input, listEl, url) {
+      if (!input || !listEl) return
+      let timer = null
+
+      function hideList() {
+        listEl.style.display = 'none'
+        listEl.innerHTML = ''
+      }
+
+      input.addEventListener('input', () => {
+        const q = (input.value || '').trim()
+        if (!q) {
+          hideList()
+          return
+        }
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(async () => {
+          try {
+            const resp = await fetch(url + '?q=' + encodeURIComponent(q), {
+              headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            if (!resp.ok) {
+              hideList()
+              return
+            }
+            const data = await resp.json()
+            const items = data.items || []
+            if (!items.length) {
+              hideList()
+              return
+            }
+            listEl.innerHTML = ''
+            items.forEach((name) => {
+              const li = document.createElement('li')
+              li.textContent = name
+              li.style.padding = '4px 10px'
+              li.style.cursor = 'pointer'
+              li.addEventListener('mousedown', (e) => {
+                e.preventDefault()
+                input.value = name
+                hideList()
+              })
+              li.addEventListener('mouseover', () => {
+                li.style.background = '#f1f5f9'
+              })
+              li.addEventListener('mouseout', () => {
+                li.style.background = 'transparent'
+              })
+              listEl.appendChild(li)
+            })
+            listEl.style.display = 'block'
+          } catch (e) {
+            hideList()
+          }
+        }, 200)
+      })
+
+      input.addEventListener('blur', () => {
+        setTimeout(hideList, 150)
+      })
+    }
+
     if (btn && panel) {
       btn.addEventListener('click', () => {
         panel.style.display =
@@ -748,6 +832,14 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       })
     }
 
+    const platformNameInput = document.getElementById('platformNameInput')
+    const platformSuggestList = document.getElementById('platformSuggestList')
+    attachSuggest(
+      platformNameInput,
+      platformSuggestList,
+      '/ui/companies/platforms/suggest'
+    )
+
     const payBtn = document.getElementById('btnAddPayment')
     const payPanel = document.getElementById('addPaymentPanel')
     const payCancel = document.getElementById('btnCancelAddPayment')
@@ -766,6 +858,14 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     if (payCancel && payPanel) {
       payCancel.addEventListener('click', () => (payPanel.style.display = 'none'))
     }
+
+    const paymentNameInput = document.getElementById('paymentNameInput')
+    const paymentSuggestList = document.getElementById('paymentSuggestList')
+    attachSuggest(
+      paymentNameInput,
+      paymentSuggestList,
+      '/ui/companies/payments/suggest'
+    )
 
     if (payForm) {
       payForm.addEventListener('submit', async (e) => {

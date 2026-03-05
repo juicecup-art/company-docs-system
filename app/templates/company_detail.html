@@ -514,10 +514,48 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     </table>
   </div>
 
+  {# =============== 新增平台（默认隐藏，点“添加平台”展开） =============== #}
+  {% if can_edit %}
+  <form id="addPlatformForm" method="post" action="/ui/companies/{{ company.id }}/platforms/add">
+    <div class="panel" id="addPlatformPanel" style="display:none; margin-top: 12px;">
+      <div class="form-grid">
+        <div style="position:relative;">
+          <label>平台名称 *</label>
+          <input
+            name="platform_name"
+            id="platformNameInput"
+            placeholder="例如 Amazon"
+            autocomplete="off"
+            required
+          />
+          <ul
+            id="platformSuggestList"
+            class="dropdown-list"
+            style="position:absolute; z-index:50; left:0; right:0; top:100%; max-height:180px; overflow:auto; background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:4px; padding:4px 0; display:none;"
+          ></ul>
+        </div>
+
+        <div>
+          <label>平台邮箱</label>
+          <input name="platform_email" placeholder="例如 login@example.com" />
+        </div>
+
+        <div>
+          <label>进度</label>
+          <input name="progress" placeholder="0-100" />
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          <button class="btn" type="submit">新增平台</button>
+          <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPlatform">取消</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
   {# =============== 收款平台（固定显示，哪怕没有也显示） =============== #}
-  <div style="margin-top: 12px; font-weight: 800; padding: 6px 2px">
-    收款平台
-  </div>
+  <div class="section-head" style="margin-top: 12px; padding: 6px 2px 0;">
+    <h3>收款平台</h3>
     <div class="section-actions">
       {% if can_edit %}
       <button type="button" class="btn btn-secondary back-soft" id="btnAddPayment">
@@ -525,6 +563,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       </button>
       {% endif %}
     </div>
+  </div>
   <div class="pl-scroll">
     <table>
       <thead>
@@ -559,50 +598,11 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     </table>
   </div>
 
-  {# =============== Add Panel（默认隐藏，点“添加平台”展开） =============== #}
-  {% if can_edit %}
-  <form id="addPlatformForm" method="post" action="/ui/companies/{{ company.id }}/platforms/add">
-    <div class="panel" id="addPlatformPanel" style="display:none; margin-top: 12px;">
-      <div class="form-grid">
-        <div style="position:relative;">
-          <label>平台名称（platform_name） *</label>
-          <input
-            name="platform_name"
-            id="platformNameInput"
-            placeholder="例如 Amazon / eMAG / Shopify"
-            autocomplete="off"
-            required
-          />
-          <ul
-            id="platformSuggestList"
-            class="dropdown-list"
-            style="position:absolute; z-index:50; left:0; right:0; top:100%; max-height:180px; overflow:auto; background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:4px; padding:4px 0; display:none;"
-          ></ul>
-        </div>
-
-        <div>
-          <label>平台邮箱（platform_email）</label>
-          <input name="platform_email" placeholder="例如 login@example.com" />
-        </div>
-
-        <div>
-          <label>进度（progress，0-100）</label>
-          <input name="progress" placeholder="例如 0 / 50 / 100" />
-        </div>
-
-        <div style="display:flex; gap:10px; align-items:flex-end;">
-          <button class="btn" type="submit">新增平台</button>
-          <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPlatform">取消</button>
-        </div>
-      </div>
-    </div>
-  </form>
-
   <form id="addPaymentForm" method="post" action="/ui/companies/{{ company.id }}/payments/add">
     <div class="panel" id="addPaymentPanel" style="display:none; margin-top: 12px;">
       <div class="form-grid">
         <div style="position:relative;">
-          <label>收款平台名称（payment_name） *</label>
+          <label>收款平台 *</label>
           <input
             name="payment_name"
             id="paymentNameInput"
@@ -618,13 +618,13 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
         </div>
 
         <div>
-          <label>平台邮箱（platform_email）</label>
+          <label>平台邮箱</label>
           <input name="platform_email" placeholder="例如 support@example.com" />
         </div>
 
         <div>
-          <label>进度（progress，0-100）</label>
-          <input name="progress" placeholder="例如 0 / 50 / 100" />
+          <label>进度</label>
+          <input name="progress" placeholder="0-100" />
         </div>
 
         <div style="display:flex; gap:10px; align-items:flex-end;">

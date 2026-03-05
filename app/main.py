@@ -37,6 +37,7 @@ from datetime import datetime
 from app.routers.document_upload import router as document_upload_router
 from app.routers.auth import router as auth_router
 from app.routers.ui import router as ui_router
+from app.routers.ui_pack import router as ui_pack_router
 from app.routers.legal_persons import router as legal_persons_router
 from app.models.document import documents
 from app.db import engine, init_db
@@ -63,6 +64,7 @@ app.include_router(ui_tickets_router)
 # =========================================================
 app.include_router(admin_router)
 app.include_router(ui_router)
+app.include_router(ui_pack_router)
 app.include_router(auth_router)
 app.include_router(document_upload_router)
 app.include_router(legal_persons_router)

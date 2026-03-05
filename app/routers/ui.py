@@ -1819,6 +1819,7 @@ async def ui_company_detail(request: Request, company_id: int):
                     id AS platform_id,
                     company_id,
                     platform_name,
+                    payment_name,
                     platform_email,
                     progress,
                     created_at
@@ -2767,10 +2768,13 @@ async def ui_company_platforms(request: Request, company_id: int):
 
 
 @router.post("/companies/{company_id}/platforms/add")
-async def ui_company_platform_add(request: Request, company_id: int,
-                                  platform_name: str = Form(...),
-                                  store_url: str = Form(""),
-                                  domain: str = Form("")):
+async def ui_company_platform_add(
+    request: Request,
+    company_id: int,
+    platform_name: str = Form(...),
+    store_url: str = Form(""),
+    domain: str = Form(""),
+):
     current_user = _get_current_user_for_ui(request)
     if not current_user:
         return _redirect("/ui/login")
@@ -2829,7 +2833,91 @@ async def ui_company_platform_add(request: Request, company_id: int,
                 status_code=302,
             )
 
-    return RedirectResponse(url=f"/ui/companies/{company_id}/platforms", status_code=302)
+    return RedirectResponse(
+        url=f"/ui/companies/{company_id}/platforms", status_code=302
+    )
+
+
+@router.post("/companies/{company_id}/payments/add")
+async def ui_company_payment_add(
+    request: Request,
+    company_id: int,
+    payment_name: str = Form(...),
+    platform_email: str = Form(""),
+    progress: str = Form(""),
+):
+    current_user = _get_current_user_for_ui(request)
+    if not current_user:
+        return _redirect("/ui/login")
+
+    if not _has_company_perm(current_user, company_id, need="edit"):
+        return _render_no_permission(
+            request,
+            current_user,
+            active="companies",
+            message="你没有权限新增收款平台（需要“编辑”权限）。",
+            back_url=f"/ui/companies/{company_id}",
+        )
+
+    name = (payment_name or "").strip()
+    email = (platform_email or "").strip() or None
+    try:
+        p_int = int((progress or "").strip())
+    except Exception:
+        p_int = None
+
+    if not name:
+        return RedirectResponse(url=f"/ui/companies/{company_id}", status_code=302)
+
+    with engine.begin() as conn:
+        exists = conn.execute(
+            text(
+                """
+                SELECT id
+                FROM company_platforms
+                WHERE company_id=:cid AND payment_name=:pname
+                LIMIT 1
+                """
+            ),
+            {"cid": company_id, "pname": name},
+        ).first()
+
+        if exists:
+            return RedirectResponse(
+                url=f"/ui/companies/{company_id}?msg=收款平台已存在",
+                status_code=302,
+            )
+
+        conn.execute(
+            text(
+                """
+                INSERT INTO company_platforms
+                    (company_id,
+                     payment_name,
+                     platform_email,
+                     progress,
+                     created_at)
+                VALUES
+                    (:cid,
+                     :payment_name,
+                     :platform_email,
+                     :progress,
+                     NOW())
+                """
+            ),
+            {
+                "cid": company_id,
+                "payment_name": name,
+                "platform_email": email,
+                "progress": p_int,
+            },
+        )
+
+    # 前端用 fetch + X-Requested-With，不强制解析 JSON；这里返回 JSON 以便调试
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JSONResponse({"ok": True})
+
+    return RedirectResponse(url=f"/ui/companies/{company_id}", status_code=302)
 
 @router.post("/companies/{company_id}/platforms/{platform_id}/delete")
 async def ui_company_platform_delete(request: Request, company_id: int, platform_id: int):
@@ -3832,6 +3920,7 @@ async def ui_company_platform_detail(request: Request, company_id: int, platform
                     id,
                     company_id,
                     platform_name,
+                    payment_name,
                     store_url,
                     domain,
                     bank_card_no,

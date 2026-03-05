@@ -421,7 +421,7 @@
         <span style="margin: 0 12px;">|</span>
         公司编号：<b>{{ company.company_code or '-' }}</b>
         <span style="margin: 0 12px;">|</span>
-        平台：<b>{{ platform.platform_name }}</b>
+        平台：<b>{{ platform.payment_name or platform.platform_name }}</b>
       </div>
     </div>
 
@@ -446,8 +446,13 @@
       <div class="grid">
         <div>
           <label>平台名称</label>
+          {% if platform.payment_name %}
+          <input value="{{ platform.payment_name }}"
+            disabled/>
+          {% else %}
           <input name="platform_name" value="{{ platform.platform_name }}"
             {% if not can_edit %}disabled{% endif %}/>
+          {% endif %}
         </div>
 
         <div>

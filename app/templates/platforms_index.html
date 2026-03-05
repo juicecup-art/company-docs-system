@@ -1,16 +1,5 @@
 {% extends "base.html" %} {% block title %}斯本贸易 - 平台列表{% endblock %} {%
-block crumb %}注册{% endblock %} {% block content %} {# ====================
-数据配置：电商平台固定列表 ==================== #} {% set fixed_platforms = [
-'Kruidvat','OBI','Mydealz','Aunch','Amazon','Temu','Worten','乐华梅兰','Fnac&draty',
-'Conforama','Hood','Fyndiq','Shein','emag','Bol','CDON','Ebay','Etsy','家乐福',
-'Cdiscount','empik','PHH','Allegro','包装法','速卖通','tiktok','onbuy' ] %} {#
-合并逻辑：固定 + DB 新出现的平台 #} {% set display_list = [] %} {% for p in
-fixed_platforms %}{% set _ = display_list.append(p) %}{% endfor %} {% for
-db_key, db_val in db_stats.items() %} {% if db_val.kind == 'platform' and
-db_val.name %} {% set is_exist = false %} {% for fp in fixed_platforms %} {% if
-fp|lower == db_key %}{% set is_exist = true %}{% endif %} {% endfor %} {% if not
-is_exist %}{% set _ = display_list.append(db_val.name) %}{% endif %} {% endif %}
-{% endfor %}
+block crumb %}注册{% endblock %} {% block content %}
 
 <style>
   .card-header {
@@ -203,7 +192,7 @@ stat.row_cnt and stat.row_cnt > 0 %}
       <div class="card-title">
         🛒 电商平台
         <span class="count-badge" id="platformCountDisplay"
-          >{{ display_list|length }}</span
+          >{{ platform_list|length }}</span
         >
       </div>
     </div>
@@ -245,18 +234,17 @@ stat.row_cnt and stat.row_cnt > 0 %}
         </tr>
       </thead>
       <tbody id="platformBody">
-        {% for p_name in display_list %} {% set stat =
-        db_stats.get(p_name|lower) %}
-        <tr class="platform-row" data-name="{{ p_name|lower }}">
+        {% for p in platform_list %} {% set p_name = p.name %}
+        <tr class="platform-row" data-name="{{ (p_name or '')|lower }}">
           <td>
             <a href="/ui/platforms/{{ p_name }}" class="platform-item">
-              <div class="platform-icon">{{ p_name[0]|upper }}</div>
+              <div class="platform-icon">{{ (p_name or '?')[0]|upper }}</div>
               {{ p_name }}
             </a>
           </td>
-          <td>{{ stat_company(stat) }}</td>
-          <td>{{ stat_rows(stat) }}</td>
-          <td>{{ stat_updated(stat) }}</td>
+          <td>{{ stat_company(p) }}</td>
+          <td>{{ stat_rows(p) }}</td>
+          <td>{{ stat_updated(p) }}</td>
           <td style="text-align: right">
             <a
               href="/ui/platforms/{{ p_name }}"

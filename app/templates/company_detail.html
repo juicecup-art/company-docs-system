@@ -563,15 +563,11 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   {% if can_edit %}
   <form id="addPlatformForm" method="post" action="/ui/companies/{{ company.id }}/platforms/add">
     <div class="panel" id="addPlatformPanel" style="display:none; margin-top: 12px;">
-      <form
-        method="post"
-        action="/ui/companies/{{ company.id }}/platforms/{% if '包装法' in request.form.platform_name|default('') %}add-pack{% else %}add{% endif %}"
-      >
-        <div class="form-grid">
-          <div>
-            <label>平台名称（platform_name） *</label>
-            <input name="platform_name" placeholder="例如 Amazon / eMAG / Shopify" required />
-          </div>
+      <div class="form-grid">
+        <div>
+          <label>平台名称（platform_name） *</label>
+          <input name="platform_name" placeholder="例如 Amazon / eMAG / Shopify" required />
+        </div>
 
         <div>
           <label>店铺链接（store_url）</label>
@@ -588,8 +584,8 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPlatform">取消</button>
         </div>
       </div>
-    </form>
-  </div>
+    </div>
+  </form>
 
   <form id="addPaymentForm" method="post" action="/ui/companies/{{ company.id }}/payments/add">
     <div class="panel" id="addPaymentPanel" style="display:none; margin-top: 12px;">
@@ -718,8 +714,15 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           submitBtn.textContent = '提交中...'
         }
 
+        const nameInput = form.querySelector('input[name="platform_name"]')
+        const nameValue = nameInput ? (nameInput.value || '').trim() : ''
+        let targetUrl = form.action
+        if (nameValue.indexOf('包装法') !== -1) {
+          targetUrl = '/ui/companies/{{ company.id }}/platforms/add-pack'
+        }
+
         try {
-          const resp = await fetch(form.action, {
+          const resp = await fetch(targetUrl, {
             method: 'POST',
             body: new FormData(form),
             headers: { 'X-Requested-With': 'XMLHttpRequest' },

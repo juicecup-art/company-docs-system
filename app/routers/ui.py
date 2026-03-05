@@ -3011,11 +3011,14 @@ def ui_platforms(request: Request):
 
     uid = int(current_user["id"])
 
+    # 电商平台：platform_name 有值且 payment_name 为空
+    # 收款平台：payment_name 有值
     if _is_admin(current_user):
-        sql = text("""
+        sql_platform = text(
+            """
             SELECT
                 LOWER(TRIM(cp.platform_name)) AS platform_key,
-                MIN(cp.platform_name) AS platform_name,
+                MIN(cp.platform_name) AS name,
                 COUNT(DISTINCT cp.company_id) AS company_cnt,
                 COUNT(*) AS row_cnt,
                 MAX(COALESCE(cp.updated_at, cp.created_at)) AS last_updated
@@ -3023,15 +3026,39 @@ def ui_platforms(request: Request):
             JOIN companies c
               ON c.id = cp.company_id
              AND c.deleted_at IS NULL
+            WHERE cp.platform_name IS NOT NULL
+              AND TRIM(cp.platform_name) <> ''
+              AND (cp.payment_name IS NULL OR TRIM(cp.payment_name) = '')
             GROUP BY LOWER(TRIM(cp.platform_name))
             ORDER BY last_updated DESC
-        """)
-        params = {}
+        """
+        )
+        sql_payment = text(
+            """
+            SELECT
+                LOWER(TRIM(cp.payment_name)) AS platform_key,
+                MIN(cp.payment_name) AS name,
+                COUNT(DISTINCT cp.company_id) AS company_cnt,
+                COUNT(*) AS row_cnt,
+                MAX(COALESCE(cp.updated_at, cp.created_at)) AS last_updated
+            FROM company_platforms cp
+            JOIN companies c
+              ON c.id = cp.company_id
+             AND c.deleted_at IS NULL
+            WHERE cp.payment_name IS NOT NULL
+              AND TRIM(cp.payment_name) <> ''
+            GROUP BY LOWER(TRIM(cp.payment_name))
+            ORDER BY last_updated DESC
+        """
+        )
+        params_platform: Dict[str, Any] = {}
+        params_payment: Dict[str, Any] = {}
     else:
-        sql = text("""
+        sql_platform = text(
+            """
             SELECT
                 LOWER(TRIM(cp.platform_name)) AS platform_key,
-                MIN(cp.platform_name) AS platform_name,
+                MIN(cp.platform_name) AS name,
                 COUNT(DISTINCT cp.company_id) AS company_cnt,
                 COUNT(*) AS row_cnt,
                 MAX(COALESCE(cp.updated_at, cp.created_at)) AS last_updated
@@ -3043,22 +3070,63 @@ def ui_platforms(request: Request):
               ON ucp.company_id = c.id
              AND ucp.user_id = :uid
              AND (ucp.can_view=1 OR ucp.can_edit=1 OR ucp.can_docs=1)
+            WHERE cp.platform_name IS NOT NULL
+              AND TRIM(cp.platform_name) <> ''
+              AND (cp.payment_name IS NULL OR TRIM(cp.payment_name) = '')
             GROUP BY LOWER(TRIM(cp.platform_name))
             ORDER BY last_updated DESC
-        """)
-        params = {"uid": uid}
+        """
+        )
+        sql_payment = text(
+            """
+            SELECT
+                LOWER(TRIM(cp.payment_name)) AS platform_key,
+                MIN(cp.payment_name) AS name,
+                COUNT(DISTINCT cp.company_id) AS company_cnt,
+                COUNT(*) AS row_cnt,
+                MAX(COALESCE(cp.updated_at, cp.created_at)) AS last_updated
+            FROM company_platforms cp
+            JOIN companies c
+              ON c.id = cp.company_id
+             AND c.deleted_at IS NULL
+            JOIN user_company_permissions ucp
+              ON ucp.company_id = c.id
+             AND ucp.user_id = :uid
+             AND (ucp.can_view=1 OR ucp.can_edit=1 OR ucp.can_docs=1)
+            WHERE cp.payment_name IS NOT NULL
+              AND TRIM(cp.payment_name) <> ''
+            GROUP BY LOWER(TRIM(cp.payment_name))
+            ORDER BY last_updated DESC
+        """
+        )
+        params_platform = {"uid": uid}
+        params_payment = {"uid": uid}
 
     with engine.connect() as conn:
-        rows = conn.execute(sql, params).mappings().all()
+        rows_platform = conn.execute(sql_platform, params_platform).mappings().all()
+        rows_payment = conn.execute(sql_payment, params_payment).mappings().all()
 
-    db_stats = {r["platform_key"]: dict(r) for r in rows}
+    db_stats: Dict[str, Any] = {}
+    platform_list = []
+    for r in rows_platform:
+        d = dict(r)
+        d["kind"] = "platform"
+        db_stats[d["platform_key"]] = d
+        platform_list.append(d)
+    for r in rows_payment:
+        d = dict(r)
+        d["kind"] = "payment"
+        db_stats[d["platform_key"]] = d
 
+    payment_list = [{"name": r["name"], "db_key": r["platform_key"]} for r in rows_payment]
 
     return templates.TemplateResponse(
         "platforms_index.html",
         {
             **_base_ctx(request, current_user, "platforms"),
-            "db_stats": db_stats, # 传字典给前端
+            "db_stats": db_stats,
+            "platform_list": platform_list,
+            "payment_list": payment_list,
         },
     )
 

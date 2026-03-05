@@ -2351,7 +2351,9 @@ async def ui_company_legal_persons(request: Request, company_id: int):
 
     with engine.connect() as conn:
         company = conn.execute(
-            text("SELECT id, company_name FROM companies WHERE id=:id LIMIT 1"),
+            text(
+                "SELECT id, company_name, company_code FROM companies WHERE id=:id LIMIT 1"
+            ),
             {"id": company_id},
         ).mappings().first()
         if not company:
@@ -3358,6 +3360,7 @@ async def ui_legal_person_edit(
 async def ui_legal_person_save(
     request: Request,
     person_id: str = Form(""),
+    company_id: str = Form(""),
     full_name: str = Form(...),
     last_name: str = Form(""),
     middle_name: str = Form(""),
@@ -3381,7 +3384,7 @@ async def ui_legal_person_save(
         return _redirect("/ui/login")
 
     pid = _q_int(person_id)
-
+    cid = _q_int(company_id)
     # 编辑权限校验
     if pid:
         if not _can_edit_legal_person(current_user, pid):
@@ -3395,6 +3398,8 @@ async def ui_legal_person_save(
 
     fn = (full_name or "").strip()
     if fn == "":
+        if cid:
+            return RedirectResponse(url=f"/ui/companies/{cid}", status_code=302)
         return RedirectResponse(url="/ui/legal-persons", status_code=302)
 
     def _date_or_none(s: str) -> str | None:
@@ -3462,6 +3467,9 @@ async def ui_legal_person_save(
                 ),
                 payload,
             )
+
+    if cid:
+        return RedirectResponse(url=f"/ui/companies/{cid}", status_code=302)
 
     return RedirectResponse(url="/ui/legal-persons", status_code=302)
 
@@ -3809,7 +3817,9 @@ async def ui_company_platform_detail(request: Request, company_id: int, platform
     # ✅ company / platform / docs（按你原逻辑再次开 conn）
     with engine.connect() as conn:
         company = conn.execute(
-            text("SELECT id, company_name FROM companies WHERE id=:id LIMIT 1"),
+            text(
+                "SELECT id, company_name, company_code FROM companies WHERE id=:id LIMIT 1"
+            ),
             {"id": company_id},
         ).mappings().first()
         if not company:

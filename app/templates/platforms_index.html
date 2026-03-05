@@ -6,10 +6,11 @@ block crumb %}注册{% endblock %} {% block content %} {# ====================
 'Cdiscount','empik','PHH','Allegro','包装法','速卖通','tiktok','onbuy' ] %} {#
 合并逻辑：固定 + DB 新出现的平台 #} {% set display_list = [] %} {% for p in
 fixed_platforms %}{% set _ = display_list.append(p) %}{% endfor %} {% for
-db_key, db_val in db_stats.items() %} {% set is_exist = false %} {% for fp in
-fixed_platforms %} {% if fp|lower == db_key %}{% set is_exist = true %}{% endif
-%} {% endfor %} {% if not is_exist %}{% set _ =
-display_list.append(db_val.platform_name) %}{% endif %} {% endfor %}
+db_key, db_val in db_stats.items() %} {% if db_val.kind == 'platform' and
+db_val.name %} {% set is_exist = false %} {% for fp in fixed_platforms %} {% if
+fp|lower == db_key %}{% set is_exist = true %}{% endif %} {% endfor %} {% if not
+is_exist %}{% set _ = display_list.append(db_val.name) %}{% endif %} {% endif %}
+{% endfor %}
 
 <style>
   .card-header {

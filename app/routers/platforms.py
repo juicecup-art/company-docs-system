@@ -86,6 +86,7 @@ def platform_detail_agg(request: Request, platform_name: str):
         SELECT
             cp.id AS cp_id,
             cp.company_id,
+            c.company_code AS company_code,
             c.company_name,
             c.country,
             cp.store_url,

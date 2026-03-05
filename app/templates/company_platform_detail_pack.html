@@ -98,6 +98,10 @@
     color: rgba(15, 23, 42, 0.78);
     margin-bottom: 6px;
   }
+  .panel label.field-disabled {
+    color: rgba(15, 23, 42, 0.58);
+    text-decoration: line-through;
+  }
   .panel input,
   .panel textarea,
   .panel select {
@@ -418,9 +422,6 @@
       <h2>平台详情</h2>
       <div class="muted" style="margin-top: 6px">
         公司：<b>{{ company.company_name }}</b>
-        <span style="margin: 0 12px;">|</span>
-        公司编号：<b>{{ company.company_code or '-' }}</b>
-        <span style="margin: 0 12px;">|</span>
         平台：<b>{{ platform.platform_name }}</b>
       </div>
     </div>
@@ -451,15 +452,13 @@
         </div>
 
         <div>
-          <label>店铺链接</label>
-          <input name="store_url" value="{{ platform.store_url or '' }}"
-            {% if not can_edit %}disabled{% endif %}/>
+          <label class="field-disabled">店铺链接</label>
+          <input name="store_url" value="{{ platform.store_url or '' }}" placeholder="无需填写" disabled />
         </div>
 
         <div>
-          <label>域名</label>
-          <input name="domain" value="{{ platform.domain or '' }}"
-            {% if not can_edit %}disabled{% endif %}/>
+          <label class="field-disabled">域名</label>
+          <input name="domain" value="{{ platform.domain or '' }}" placeholder="无需填写" disabled />
         </div>
 
         <div>
@@ -530,7 +529,7 @@
         </div>
 
         <div>
-          <label>银行卡号</label>
+          <label>包装法号</label>
           <input
             type="text"
             name="bank_card_no"
@@ -542,34 +541,35 @@
         </div>
 
         <div>
-          <label>银行卡所属</label>
+          <label class="field-disabled">银行卡所属</label>
           <input
             type="text"
             name="bank_card_owner"
             autocomplete="off"
             inputmode="text"
             value="{{ platform.bank_card_owner or '' }}"
-            {% if not can_edit %}disabled{% endif %}
+            placeholder="无需填写"
+            disabled
           />
         </div>
 
         <div>
-          <label>银行卡图片</label>
+          <label>包装法文件</label>
           {% if can_edit %}
           <div style="margin-top: 4px; display: flex; gap: 8px; align-items: center;">
-            <input type="file" name="file" accept="image/*" form="bank-card-image-upload-form" />
-            <button class="btn" type="submit" form="bank-card-image-upload-form">上传</button>
+            <input type="file" name="file" accept="image/*" form="packaging-act-upload-form" />
+            <button class="btn" type="submit" form="packaging-act-upload-form">上传</button>
           </div>
           {% endif %}
         </div>
 
-        {% if platform.bank_card_image %}
+        {% if platform.packaging_act %}
         <div style="grid-column: 1 / -1; margin-top: 6px">
           <div style="position: relative; display: inline-block;">
             <img
-              src="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image"
-              data-full="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image"
-              alt="银行卡图片"
+              src="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/packaging-act"
+              data-full="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/packaging-act"
+              alt="包装法文件"
               class="thumb"
               title="点击放大"
               style="max-width: 260px; border-radius: 10px; border: 1px solid var(--border);"
@@ -578,7 +578,7 @@
             <div style="position: absolute; top: -8px; right: -8px;">
               <button
                 type="submit"
-                form="bank-card-image-delete-form"
+                form="packaging-act-delete-form"
                 onclick="return confirm('是否删除此图片？')"
                 style="
                   width: 20px;
@@ -615,15 +615,15 @@
     </form>
 
     <form
-      id="bank-card-image-upload-form"
+      id="packaging-act-upload-form"
       method="post"
-      action="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image/upload"
+      action="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/packaging-act/upload"
       enctype="multipart/form-data"
     ></form>
     <form
-      id="bank-card-image-delete-form"
+      id="packaging-act-delete-form"
       method="post"
-      action="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/bank-card-image/delete"
+      action="/ui/companies/{{ company.id }}/platforms/{{ platform.id }}/packaging-act/delete"
     ></form>
   </div>
 
@@ -887,6 +887,18 @@
 
       // 失焦自动收起（如果你不想自动收起，删掉下面这一段）
       ta.addEventListener("blur", () => setExpanded(ta, false));
+    });
+  })();
+</script>
+
+{% endblock %}
+lse));
+    });
+  })();
+</script>
+
+{% endblock %}
+lse));
     });
   })();
 </script>

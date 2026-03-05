@@ -170,7 +170,11 @@ set can_write = false %} {% endif %}
 
   <form method="post" action="/ui/legal-persons/save" style="margin-top: 12px">
     <input type="hidden" name="person_id" value="{{ person.id or '' }}" />
-
+    <input
+      type="hidden"
+      name="company_id"
+      value="{{ company.id if company else '' }}"
+    />
     <!-- 基本信息 -->
     <div class="panel">
       <div class="panel-title">
@@ -383,11 +387,17 @@ set can_write = false %} {% endif %}
       </div>
     </div>
 
+    {% if company %}
+    <input type="hidden" name="company_id" value="{{ company.id }}" />
+    {% endif %}
+
     <!-- 操作 -->
     <div class="form-actions">
       {% if can_write %}
       <button class="btn" type="submit">保存</button>
-      {% endif %} {% if company %} {% else %}
+      {% endif %} {% if company %}
+      <a class="mini-btn" href="/ui/companies/{{ company.id }}">返回该公司</a>
+      {% else %}
       <a class="mini-btn" href="/ui/legal-persons">返回列表</a>
       {% endif %}
     </div>

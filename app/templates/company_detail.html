@@ -458,7 +458,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     <div class="section-actions">
       {% if can_edit %}
       <button type="button" class="btn btn-secondary back-soft" id="btnAddPlatform">
-        ➕ 添加平台或收款
+        ➕ 添加平台
       </button>
       {% endif %}
     </div>
@@ -467,11 +467,13 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   {# 1) 定义哪些名字算“收款平台” #}
   {% set pay_names = ['skyee','payoneer','worldfirst','pingpong'] %}
 
-  {# 2) 拆两组 #}
   {% set ns = namespace(ecom=[], pay=[]) %}
   {% for p in platforms %}
+    {% set pn = (p.payment_name or '')|lower %}
     {% set n = (p.platform_name or '')|lower %}
-    {% if n in pay_names %}
+    {% if pn %}
+      {% set _ = ns.pay.append(p) %}
+    {% elif n in pay_names %}
       {% set _ = ns.pay.append(p) %}
     {% else %}
       {% set _ = ns.ecom.append(p) %}
@@ -516,7 +518,13 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   <div style="margin-top: 12px; font-weight: 800; padding: 6px 2px">
     收款平台
   </div>
-
+    <div class="section-actions">
+      {% if can_edit %}
+      <button type="button" class="btn btn-secondary back-soft" id="btnAddPayment">
+        ➕ 添加收款
+      </button>
+      {% endif %}
+    </div>
   <div class="pl-scroll">
     <table>
       <thead>
@@ -534,7 +542,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.platform_name }}</b>
+                <b>{{ p.payment_name or p.platform_name }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -579,6 +587,32 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       </div>
     </form>
   </div>
+
+  <form id="addPaymentForm" method="post" action="/ui/companies/{{ company.id }}/payments/add">
+    <div class="panel" id="addPaymentPanel" style="display:none; margin-top: 12px;">
+      <div class="form-grid">
+        <div>
+          <label>收款平台名称（payment_name） *</label>
+          <input name="payment_name" placeholder="例如 Skyee / Payoneer" required />
+        </div>
+
+        <div>
+          <label>平台邮箱（platform_email）</label>
+          <input name="platform_email" placeholder="例如 support@example.com" />
+        </div>
+
+        <div>
+          <label>进度（progress，0-100）</label>
+          <input name="progress" placeholder="例如 0 / 50 / 100" />
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          <button class="btn" type="submit">新增收款</button>
+          <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPayment">取消</button>
+        </div>
+      </div>
+    </div>
+  </form>
   {% endif %}
 </div>
     </div>
@@ -671,7 +705,6 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       cancel.addEventListener('click', () => (panel.style.display = 'none'))
     }
 
-    // ✅ 不跳转：用 fetch 提交
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault()
@@ -695,7 +728,6 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
             return
           }
 
-          // ✅ 成功：关闭面板 + 刷新当前页（仍停留在公司详情页）
           if (panel) panel.style.display = 'none'
           form.reset()
           location.reload()
@@ -705,6 +737,62 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           if (submitBtn) {
             submitBtn.disabled = false
             submitBtn.textContent = '新增平台'
+          }
+        }
+      })
+    }
+
+    const payBtn = document.getElementById('btnAddPayment')
+    const payPanel = document.getElementById('addPaymentPanel')
+    const payCancel = document.getElementById('btnCancelAddPayment')
+    const payForm = document.getElementById('addPaymentForm')
+
+    if (payBtn && payPanel) {
+      payBtn.addEventListener('click', () => {
+        payPanel.style.display =
+          payPanel.style.display === 'none' || !payPanel.style.display ? 'block' : 'none'
+        if (payPanel.style.display === 'block') {
+          const inp = payPanel.querySelector('input[name="payment_name"]')
+          if (inp) inp.focus()
+        }
+      })
+    }
+    if (payCancel && payPanel) {
+      payCancel.addEventListener('click', () => (payPanel.style.display = 'none'))
+    }
+
+    if (payForm) {
+      payForm.addEventListener('submit', async (e) => {
+        e.preventDefault()
+
+        const submitBtn = payForm.querySelector('button[type="submit"]')
+        if (submitBtn) {
+          submitBtn.disabled = true
+          submitBtn.textContent = '提交中...'
+        }
+
+        try {
+          const resp = await fetch(payForm.action, {
+            method: 'POST',
+            body: new FormData(payForm),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          })
+
+          if (!resp.ok) {
+            const text = await resp.text()
+            alert('新增失败：' + (text || resp.status))
+            return
+          }
+
+          if (payPanel) payPanel.style.display = 'none'
+          payForm.reset()
+          location.reload()
+        } catch (err) {
+          alert('新增失败：网络错误')
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false
+            submitBtn.textContent = '新增收款'
           }
         }
       })

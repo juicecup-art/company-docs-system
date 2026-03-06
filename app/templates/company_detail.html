@@ -323,16 +323,34 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
         <div class="v muted">{{ company.register_time or '-' }}</div>
       </div>
 
+      {# 计算当前地址：优先使用 company_addresses 中 is_current=1 的记录 #}
+      {% set current_addr = None %}
+      {% for a in addresses %}
+        {% if a.is_current == 1 and (current_addr is none) %}
+          {% set current_addr = a %}
+        {% endif %}
+      {% endfor %}
+
       <!-- 第4行：公司地址（整行） -->
       <div class="kv span3">
         <div class="k">公司地址 / Adresse</div>
+        {% if current_addr %}
+        <div class="v muted">
+          {{ current_addr.address }}{% if current_addr.postal_code %}（{{ current_addr.postal_code }}）{% endif %}
+        </div>
+        {% else %}
         <div class="v muted">{{ company.address or '-' }}</div>
+        {% endif %}
       </div>
 
       <!-- 第5行：邮政编码 + 更新时间 + 创建时间（同一行三列对齐） -->
       <div class="kv">
         <div class="k">邮政编码 / postal code</div>
+        {% if current_addr %}
+        <div class="v muted">{{ current_addr.postal_code or '-' }}</div>
+        {% else %}
         <div class="v muted">{{ company.postal_code or '-' }}</div>
+        {% endif %}
       </div>
 
       <div class="kv">
@@ -357,10 +375,19 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       </div>
     </div>
 
-    <!-- 公司地址（合并：companies.address + company_addresses） -->
-    <!-- <div class="section">
+    <!-- 公司地址列表（只读展示，数据来自 company_addresses） -->
+    <div class="section">
       <div class="section-head">
         <h3>公司地址</h3>
+        <div class="section-actions">
+          <a
+            class="btn btn-secondary btn-sm"
+            href="/ui/companies/{{ company.id }}/addresses"
+            style="text-decoration:none"
+          >
+            管理地址
+          </a>
+        </div>
       </div>
 
       <table>
@@ -372,278 +399,378 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
             <th style="width: 140px">类型</th>
             <th style="width: 90px">当前</th>
             <th>备注</th>
+            <th style="width: 170px">创建时间</th>
           </tr>
         </thead>
         <tbody>
-          {# ✅ 先显示 companies 表里的 address（如果有） #} {% if
-          company.address %}
-          <tr>
-            <td class="muted">—</td>
-            <td class="muted">{{ company.address }}</td>
-            <td class="muted">{{ company.postal_code }}</td>
-            <td class="muted">primary (companies.address)</td>
-            <td><b>1</b></td>
-            <td class="muted">来自 companies 表</td>
-          </tr>
-          {% endif %} {# ✅ 再显示 company_addresses #} {% for a in addresses %}
-          <tr>
-            <td class="muted">{{ a.id }}</td>
-            <td class="muted">{{ a.address }}</td>
-            <td class="muted">{{ a.postal_code }}</td>
-            <td class="muted">{{ a.address_type }}</td>
-            <td><b>{{ a.is_current }}</b></td>
-            <td class="muted">{{ a.note }}</td>
-          </tr>
-          {% endfor %}
+          {% if addresses|length > 0 %}
+            {% for a in addresses %}
+            <tr>
+              <td class="muted">{{ a.id }}</td>
+              <td class="muted">{{ a.address }}</td>
+              <td class="muted">{{ a.postal_code }}</td>
+              <td class="muted">{{ a.address_type }}</td>
+              <td>
+                {% if a.is_current == 1 %}
+                <span class="pill">CURRENT</span>
+                {% else %}
+                <span class="muted">{{ a.is_current }}</span>
+                {% endif %}
+              </td>
+              <td class="muted">{{ a.note }}</td>
+              <td class="muted">{{ a.created_at }}</td>
+            </tr>
+            {% endfor %}
+          {% elif company.address %}
+            <tr>
+              <td class="muted">—</td>
+              <td class="muted">{{ company.address }}</td>
+              <td class="muted">{{ company.postal_code }}</td>
+              <td class="muted">primary (companies.address)</td>
+              <td><span class="pill">CURRENT</span></td>
+              <td class="muted">来自 companies 表</td>
+              <td class="muted">{{ company.created_at }}</td>
+            </tr>
+          {% endif %}
         </tbody>
-      </table>
 
-      {% if (not company.address) and (addresses|length == 0) %}
-      <p class="muted" style="margin-top: 10px">暂无地址记录。</p>
-      {% endif %}
-    </div> -->
+        {% if (addresses|length == 0) and (not company.address) %}
+        <p class="muted" style="margin-top: 10px">暂无地址记录。</p>
+        {% endif %}
+      </table>
+    </div>
 
     <!-- 绑定法人（第二） -->
     <div class="section">
       <div class="section-head">
-        <h3>法人信息</h3>
-        <div class="muted">company_legal_persons（点击姓名可查看/编辑）</div>
-      </div>
+          <h3>法人信息</h3>
+          <div class="muted">company_legal_persons（点击姓名可查看/编辑）</div>
+        </div>
 
-      <table>
-        <thead>
-          <tr>
-            <!-- <th style="width: 70px">Link</th>
+        <table>
+          <thead>
+            <tr>
+              <!-- <th style="width: 70px">Link</th>
             <th style="width: 80px">LP ID</th> -->
-            <th>姓名</th>
-            <th style="width: 120px">国籍</th>
-            <th style="width: 120px">生日</th>
-            <th style="width: 160px">证件号</th>
-            <th style="width: 160px">护照号</th>
-            <th style="width: 140px">角色</th>
-            <th style="width: 170px">绑定时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in legal_persons %}
-          <tr>
-            <td>
-              <a
-                href="/ui/legal-persons/{{ r.legal_person_id }}/edit?company_id={{ company.id }}"
-                style="text-decoration: none; color: black"
+              <th>姓名</th>
+              <th style="width: 120px">国籍</th>
+              <th style="width: 120px">生日</th>
+              <th style="width: 160px">证件号</th>
+              <th style="width: 160px">护照号</th>
+              <th style="width: 140px">角色</th>
+              <th style="width: 170px">绑定时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in legal_persons %}
+            <tr>
+              <td>
+                <a
+                  href="/ui/legal-persons/{{ r.legal_person_id }}/edit?company_id={{ company.id }}"
+                  style="text-decoration: none; color: black"
+                >
+                  <b>{{ r.full_name }}</b>
+                </a>
+              </td>
+              <td class="muted">{{ r.nationality }}</td>
+              <td class="muted">{{ r.birthday }}</td>
+              <td class="muted">{{ r.id_number }}</td>
+              <td class="muted">{{ r.passport_number }}</td>
+              <td class="muted">{{ r.role }}</td>
+              <td class="muted">{{ r.linked_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if legal_persons|length == 0 %}
+        <p class="muted" style="margin-top: 10px">暂无绑定记录。</p>
+        {% endif %}
+      </div>
+
+      <!-- 公司平台（第三） -->
+      <div class="section">
+        <div class="section-head">
+          <h3>公司平台</h3>
+
+          <div class="section-actions">
+            {% if can_edit %}
+            <button
+              type="button"
+              class="btn btn-secondary back-soft"
+              id="btnAddPlatform"
+            >
+              ➕ 添加平台
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+        {# 1) 定义哪些名字算“收款平台” #} {% set pay_names =
+        ['skyee','payoneer','worldfirst','pingpong'] %} {% set ns =
+        namespace(ecom=[], pay=[]) %} {% for p in platforms %} {% set pn =
+        (p.payment_name or '')|lower %} {% set n = (p.platform_name or '')|lower
+        %} {% if pn %} {% set _ = ns.pay.append(p) %} {% elif n in pay_names %}
+        {% set _ = ns.pay.append(p) %} {% else %} {% set _ = ns.ecom.append(p)
+        %} {% endif %} {% endfor %} {# ===============
+        平台列表（固定显示，超过5条滚动） =============== #}
+        <div class="pl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 160px">平台</th>
+                <th style="width: 100px">平台邮箱</th>
+                <th style="width: 220px">进度</th>
+                <th style="width: 170px">创建时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if ns.ecom|length > 0 %} {% for p in ns.ecom %}
+              <tr>
+                <td>
+                  <a
+                    href="/ui/company-platforms/{{ p.platform_id }}"
+                    style="text-decoration: none; color: black"
+                  >
+                    <b
+                      >{{ p.packing_name or p.platform_name or 'Unknown
+                      Platform' }}</b
+                    >
+                  </a>
+                </td>
+                <td class="muted">{{ p.platform_email }}</td>
+                <td class="muted">{{ p.progress }}</td>
+                <td class="muted">{{ p.created_at }}</td>
+              </tr>
+              {% endfor %} {% else %}
+              <tr>
+                <td colspan="4" class="muted">暂无平台记录。</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        {# =============== 新增平台（默认隐藏，点“添加平台”展开）
+        =============== #} {% if can_edit %}
+        <form
+          id="addPlatformForm"
+          method="post"
+          action="/ui/companies/{{ company.id }}/platforms/add"
+        >
+          <div
+            class="panel"
+            id="addPlatformPanel"
+            style="display: none; margin-top: 12px; padding: 12px 20px"
+          >
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                align-items: flex-end;
+              "
+            >
+              <div style="position: relative; flex: 1; min-width: 260px">
+                <label>平台名称 *</label>
+                <input
+                  name="platform_name"
+                  id="platformNameInput"
+                  placeholder="例如 Amazon"
+                  autocomplete="off"
+                  required
+                />
+                <ul
+                  id="platformSuggestList"
+                  class="dropdown-list"
+                  style="
+                    position: absolute;
+                    z-index: 50;
+                    left: 0;
+                    right: 0;
+                    top: 100%;
+                    max-height: 180px;
+                    overflow: auto;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    margin-top: 4px;
+                    padding: 4px 0;
+                    display: none;
+                  "
+                ></ul>
+              </div>
+
+              <div style="flex: 1; min-width: 220px">
+                <label>平台邮箱</label>
+                <input
+                  name="platform_email"
+                  placeholder="例如 login@example.com"
+                />
+              </div>
+
+              <div style="flex: 0 0 140px">
+                <label>进度</label>
+                <input name="progress" placeholder="0-100" />
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  gap: 10px;
+                  align-items: flex-end;
+                  flex: 0 0 auto;
+                "
               >
-                <b>{{ r.full_name }}</b>
-              </a>
-            </td>
-            <td class="muted">{{ r.nationality }}</td>
-            <td class="muted">{{ r.birthday }}</td>
-            <td class="muted">{{ r.id_number }}</td>
-            <td class="muted">{{ r.passport_number }}</td>
-            <td class="muted">{{ r.role }}</td>
-            <td class="muted">{{ r.linked_at }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% if legal_persons|length == 0 %}
-      <p class="muted" style="margin-top: 10px">暂无绑定记录。</p>
-      {% endif %}
-    </div>
+                <button class="btn" type="submit">新增平台</button>
+                <button
+                  type="button"
+                  class="btn btn-secondary back-ghost"
+                  id="btnCancelAddPlatform"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
 
-<!-- 公司平台（第三） -->
-<div class="section">
-  <div class="section-head">
-    <h3>公司平台</h3>
+        {# =============== 收款平台（固定显示，哪怕没有也显示） ===============
+        #}
+        <div class="section-head" style="margin-top: 12px; padding: 6px 2px 0">
+          <h3>收款平台</h3>
+          <div class="section-actions">
+            {% if can_edit %}
+            <button
+              type="button"
+              class="btn btn-secondary back-soft"
+              id="btnAddPayment"
+            >
+              ➕ 添加收款
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="pl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 160px">平台</th>
+                <th style="width: 100px">平台邮箱</th>
+                <th style="width: 220px">进度</th>
+                <th style="width: 170px">创建时间</th>
+              </tr>
+            </thead>
 
-    <div class="section-actions">
-      {% if can_edit %}
-      <button type="button" class="btn btn-secondary back-soft" id="btnAddPlatform">
-        ➕ 添加平台
-      </button>
-      {% endif %}
-    </div>
-  </div>
+            <tbody>
+              {% if ns.pay|length > 0 %} {% for p in ns.pay %}
+              <tr>
+                <td>
+                  <a
+                    href="/ui/company-platforms/{{ p.platform_id }}"
+                    style="text-decoration: none; color: black"
+                  >
+                    <b
+                      >{{ p.packing_name or p.payment_name or p.platform_name or
+                      'Unknown Platform' }}</b
+                    >
+                  </a>
+                </td>
+                <td class="muted">{{ p.platform_email }}</td>
+                <td class="muted">{{ p.progress }}</td>
+                <td class="muted">{{ p.created_at }}</td>
+              </tr>
+              {% endfor %} {% else %}
+              <tr>
+                <td colspan="4" class="muted">暂无收款平台记录。</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
 
-  {# 1) 定义哪些名字算“收款平台” #}
-  {% set pay_names = ['skyee','payoneer','worldfirst','pingpong'] %}
+        <form
+          id="addPaymentForm"
+          method="post"
+          action="/ui/companies/{{ company.id }}/payments/add"
+        >
+          <div
+            class="panel"
+            id="addPaymentPanel"
+            style="display: none; margin-top: 12px; padding: 12px 20px"
+          >
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                align-items: flex-end;
+              "
+            >
+              <div style="position: relative; flex: 1; min-width: 260px">
+                <label>收款平台 *</label>
+                <input
+                  name="payment_name"
+                  id="paymentNameInput"
+                  placeholder="例如 Skyee / Payoneer"
+                  autocomplete="off"
+                  required
+                />
+                <ul
+                  id="paymentSuggestList"
+                  class="dropdown-list"
+                  style="
+                    position: absolute;
+                    z-index: 50;
+                    left: 0;
+                    right: 0;
+                    top: 100%;
+                    max-height: 180px;
+                    overflow: auto;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    margin-top: 4px;
+                    padding: 4px 0;
+                    display: none;
+                  "
+                ></ul>
+              </div>
 
-  {% set ns = namespace(ecom=[], pay=[]) %}
-  {% for p in platforms %}
-    {% set pn = (p.payment_name or '')|lower %}
-    {% set n = (p.platform_name or '')|lower %}
-    {% if pn %}
-      {% set _ = ns.pay.append(p) %}
-    {% elif n in pay_names %}
-      {% set _ = ns.pay.append(p) %}
-    {% else %}
-      {% set _ = ns.ecom.append(p) %}
-    {% endif %}
-  {% endfor %}
+              <div style="flex: 1; min-width: 220px">
+                <label>平台邮箱</label>
+                <input
+                  name="platform_email"
+                  placeholder="例如 support@example.com"
+                />
+              </div>
 
-  {# =============== 平台列表（固定显示，超过5条滚动） =============== #}
-  <div class="pl-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 160px">平台</th>
-          <th style="width: 100px">平台邮箱</th>
-          <th style="width: 220px">进度</th>
-          <th style="width: 170px">创建时间</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if ns.ecom|length > 0 %}
-          {% for p in ns.ecom %}
-          <tr>
-            <td>
-              <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.packing_name or p.platform_name or 'Unknown Platform' }}</b>
-              </a>
-            </td>
-            <td class="muted">{{ p.platform_email }}</td>
-            <td class="muted">{{ p.progress }}</td>
-            <td class="muted">{{ p.created_at }}</td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="4" class="muted">暂无平台记录。</td>
-          </tr>
+              <div style="flex: 0 0 140px">
+                <label>进度</label>
+                <input name="progress" placeholder="0-100" />
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  gap: 10px;
+                  align-items: flex-end;
+                  flex: 0 0 auto;
+                "
+              >
+                <button class="btn" type="submit">新增收款</button>
+                <button
+                  type="button"
+                  class="btn btn-secondary back-ghost"
+                  id="btnCancelAddPayment"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
         {% endif %}
-      </tbody>
-    </table>
-  </div>
-
-  {# =============== 新增平台（默认隐藏，点“添加平台”展开） =============== #}
-  {% if can_edit %}
-  <form id="addPlatformForm" method="post" action="/ui/companies/{{ company.id }}/platforms/add">
-    <div
-      class="panel"
-      id="addPlatformPanel"
-      style="display:none; margin-top: 12px; padding: 12px 20px;"
-    >
-      <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;">
-        <div style="position:relative; flex:1; min-width:260px;">
-          <label>平台名称 *</label>
-          <input
-            name="platform_name"
-            id="platformNameInput"
-            placeholder="例如 Amazon"
-            autocomplete="off"
-            required
-          />
-          <ul
-            id="platformSuggestList"
-            class="dropdown-list"
-            style="position:absolute; z-index:50; left:0; right:0; top:100%; max-height:180px; overflow:auto; background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:4px; padding:4px 0; display:none;"
-          ></ul>
-        </div>
-
-        <div style="flex:1; min-width:220px;">
-          <label>平台邮箱</label>
-          <input name="platform_email" placeholder="例如 login@example.com" />
-        </div>
-
-        <div style="flex:0 0 140px;">
-          <label>进度</label>
-          <input name="progress" placeholder="0-100" />
-        </div>
-
-        <div style="display:flex; gap:10px; align-items:flex-end; flex:0 0 auto;">
-          <button class="btn" type="submit">新增平台</button>
-          <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPlatform">取消</button>
-        </div>
       </div>
-    </div>
-  </form>
-
-  {# =============== 收款平台（固定显示，哪怕没有也显示） =============== #}
-  <div class="section-head" style="margin-top: 12px; padding: 6px 2px 0;">
-    <h3>收款平台</h3>
-    <div class="section-actions">
-      {% if can_edit %}
-      <button type="button" class="btn btn-secondary back-soft" id="btnAddPayment">
-        ➕ 添加收款
-      </button>
-      {% endif %}
-    </div>
-  </div>
-  <div class="pl-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 160px">平台</th>
-          <th style="width: 100px">平台邮箱</th>
-          <th style="width: 220px">进度</th>
-          <th style="width: 170px">创建时间</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% if ns.pay|length > 0 %}
-          {% for p in ns.pay %}
-          <tr>
-            <td>
-              <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.packing_name or p.payment_name or p.platform_name or 'Unknown Platform' }}</b>
-              </a>
-            </td>
-            <td class="muted">{{ p.platform_email }}</td>
-            <td class="muted">{{ p.progress }}</td>
-            <td class="muted">{{ p.created_at }}</td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="4" class="muted">暂无收款平台记录。</td>
-          </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-
-  <form id="addPaymentForm" method="post" action="/ui/companies/{{ company.id }}/payments/add">
-    <div
-      class="panel"
-      id="addPaymentPanel"
-      style="display:none; margin-top: 12px; padding: 12px 20px;"
-    >
-      <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;">
-        <div style="position:relative; flex:1; min-width:260px;">
-          <label>收款平台 *</label>
-          <input
-            name="payment_name"
-            id="paymentNameInput"
-            placeholder="例如 Skyee / Payoneer"
-            autocomplete="off"
-            required
-          />
-          <ul
-            id="paymentSuggestList"
-            class="dropdown-list"
-            style="position:absolute; z-index:50; left:0; right:0; top:100%; max-height:180px; overflow:auto; background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:4px; padding:4px 0; display:none;"
-          ></ul>
-        </div>
-
-        <div style="flex:1; min-width:220px;">
-          <label>平台邮箱</label>
-          <input name="platform_email" placeholder="例如 support@example.com" />
-        </div>
-
-        <div style="flex:0 0 140px;">
-          <label>进度</label>
-          <input name="progress" placeholder="0-100" />
-        </div>
-
-        <div style="display:flex; gap:10px; align-items:flex-end; flex:0 0 auto;">
-          <button class="btn" type="submit">新增收款</button>
-          <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPayment">取消</button>
-        </div>
-      </div>
-    </div>
-  </form>
-  {% endif %}
-</div>
     </div>
     <!-- 最近文档（第四） -->
     <div class="section">
@@ -714,7 +841,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   </div>
 </div>
 <script>
-  (function () {
+  ;(function () {
     const btn = document.getElementById('btnAddPlatform')
     const panel = document.getElementById('addPlatformPanel')
     const cancel = document.getElementById('btnCancelAddPlatform')
@@ -789,7 +916,9 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     if (btn && panel) {
       btn.addEventListener('click', () => {
         panel.style.display =
-          panel.style.display === 'none' || !panel.style.display ? 'block' : 'none'
+          panel.style.display === 'none' || !panel.style.display
+            ? 'block'
+            : 'none'
         if (panel.style.display === 'block') {
           const inp = panel.querySelector('input[name="platform_name"]')
           if (inp) inp.focus()
@@ -860,7 +989,9 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     if (payBtn && payPanel) {
       payBtn.addEventListener('click', () => {
         payPanel.style.display =
-          payPanel.style.display === 'none' || !payPanel.style.display ? 'block' : 'none'
+          payPanel.style.display === 'none' || !payPanel.style.display
+            ? 'block'
+            : 'none'
         if (payPanel.style.display === 'block') {
           const inp = payPanel.querySelector('input[name="payment_name"]')
           if (inp) inp.focus()
@@ -868,16 +999,15 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       })
     }
     if (payCancel && payPanel) {
-      payCancel.addEventListener('click', () => (payPanel.style.display = 'none'))
+      payCancel.addEventListener(
+        'click',
+        () => (payPanel.style.display = 'none')
+      )
     }
 
     const paymentNameInput = document.getElementById('paymentNameInput')
     const paymentSuggestList = document.getElementById('paymentSuggestList')
-    attachSuggest(
-      paymentNameInput,
-      paymentSuggestList,
-      '/ui/payments/suggest'
-    )
+    attachSuggest(paymentNameInput, paymentSuggestList, '/ui/payments/suggest')
 
     if (payForm) {
       payForm.addEventListener('submit', async (e) => {
@@ -916,4 +1046,5 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       })
     }
   })()
-</script>{% endblock %}
+</script>
+{% endblock %}

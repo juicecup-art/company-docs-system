@@ -2528,7 +2528,7 @@ async def ui_company_addresses(request: Request, company_id: int):
         company = conn.execute(
             text(
                 """
-                SELECT id, company_name, country, registration_number
+                SELECT id, company_name, country, registration_number, address, postal_code, created_at
                 FROM companies
                 WHERE id=:id
                 LIMIT 1
@@ -2553,6 +2553,47 @@ async def ui_company_addresses(request: Request, company_id: int):
             ),
             {"cid": company_id},
         ).mappings().all()
+
+    # 若当前没有任何 company_addresses 记录，但 companies 表上有 address，
+    # 则自动同步一条初始地址进入 company_addresses，方便后续统一管理。
+    if not rows and (company.get("address") or "").strip():
+        addr_val = (company.get("address") or "").strip()
+        postal_val = (company.get("postal_code") or "").strip()
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO company_addresses
+                        (company_id, address, postal_code, address_type, is_current, note, created_at)
+                    VALUES
+                        (:cid, :address, :postal_code, :address_type, :is_current, :note, :created_at)
+                    """
+                ),
+                {
+                    "cid": company_id,
+                    "address": addr_val,
+                    "postal_code": postal_val or None,
+                    "address_type": "primary",
+                    "is_current": 1,
+                    "note": "imported from companies.address on first open of address management",
+                    "created_at": company.get("created_at"),
+                },
+            )
+
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT
+                        id, company_id, address, postal_code,
+                        address_type, is_current, note, created_at
+                    FROM company_addresses
+                    WHERE company_id = :cid
+                    ORDER BY is_current DESC, id DESC
+                    """
+                ),
+                {"cid": company_id},
+            ).mappings().all()
 
     can_edit = _has_company_perm(current_user, company_id, need="edit")
 

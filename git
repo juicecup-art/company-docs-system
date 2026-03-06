@@ -1,7 +1,12 @@
+【本机】
 git add .
-git commit -m "2026.3.6 17:27"
+git commit -m "2026.3.6 18:59"
 git push
 
-git push macmini main
-git reset --hard origin/main
-git pull
+【mac】
+在本机终端输入：
+scp -r "D:\company-docs-system\*" luis@192.168.1.189:~/company-docs-system/
+在mac输入：
+cd ~
+git clone https://github.com/juicecup-art/company-docs-system.git company-docs-system-new
+git reset --hard HEAD

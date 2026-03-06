@@ -460,14 +460,22 @@
 
         <div>
           <label>店铺链接</label>
+          {% if platform.packing_name %}
+          <input value="无需填写" style="text-decoration: line-through; color: gray;" disabled/>
+          {% else %}
           <input name="store_url" value="{{ platform.store_url or '' }}"
             {% if not can_edit %}disabled{% endif %}/>
+          {% endif %}
         </div>
 
         <div>
           <label>域名</label>
+          {% if platform.packing_name %}
+          <input value="无需填写" style="text-decoration: line-through; color: gray;" disabled/>
+          {% else %}
           <input name="domain" value="{{ platform.domain or '' }}"
             {% if not can_edit %}disabled{% endif %}/>
+          {% endif %}
         </div>
 
         <div>
@@ -538,7 +546,7 @@
         </div>
 
         <div>
-          <label>银行卡号</label>
+          <label>{% if platform.packing_name %}包装法法号{% else %}银行卡号{% endif %}</label>
           <input
             type="text"
             name="bank_card_no"
@@ -551,6 +559,9 @@
 
         <div>
           <label>银行卡所属</label>
+          {% if platform.packing_name %}
+          <input value="无需填写" style="text-decoration: line-through; color: gray;" disabled/>
+          {% else %}
           <input
             type="text"
             name="bank_card_owner"
@@ -559,10 +570,11 @@
             value="{{ platform.bank_card_owner or '' }}"
             {% if not can_edit %}disabled{% endif %}
           />
+          {% endif %}
         </div>
 
         <div>
-          <label>银行卡图片</label>
+          <label>{% if platform.packing_name %}包装法文件{% else %}银行卡图片{% endif %}</label>
           {% if can_edit %}
           <div style="margin-top: 4px; display: flex; gap: 8px; align-items: center;">
             <input type="file" name="file" accept="image/*" form="bank-card-image-upload-form" />

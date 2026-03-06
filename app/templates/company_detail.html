@@ -497,7 +497,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.platform_name }}</b>
+                <b>{{ p.packing_name or p.platform_name or 'Unknown Platform' }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -581,7 +581,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.payment_name or p.platform_name }}</b>
+                <b>{{ p.packing_name or p.payment_name or p.platform_name or 'Unknown Platform' }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -864,7 +864,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     attachSuggest(
       paymentNameInput,
       paymentSuggestList,
-      '/ui/payments/suggest'
+      '/ui/companies/payments/suggest'
     )
 
     if (payForm) {
@@ -904,5 +904,4 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       })
     }
   })()
-</script>
-{% endblock %}
+</script>{% endblock %}

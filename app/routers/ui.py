@@ -1812,6 +1812,8 @@ async def ui_company_detail(request: Request, company_id: int):
         ).mappings().all()
 
         # 5) 平台列表（展示）
+        # 平台列表（展示）- 添加详细调试
+        print(f"[DEBUG] Querying platforms for company_id: {company_id}")
         platforms = conn.execute(
             text(
                 """
@@ -1832,6 +1834,17 @@ async def ui_company_detail(request: Request, company_id: int):
             ),
             {"cid": company_id},
         ).mappings().all()
+
+        try:
+            debug_platforms = [dict(p) for p in platforms]
+            # Debug each platform individually to see the packing_name values
+            print(f"[DEBUG] Total platforms found: {len(platforms)}")
+            for i, p in enumerate(platforms):
+                print(f"[DEBUG platform {i}] company_id={company_id} platform_id={p.platform_id} platform_name={p.platform_name} packing_name={p.packing_name} payment_name={p.payment_name}")
+        except Exception as e:
+            print(f"[DEBUG ERROR] Failed to process platforms: {e}")
+            debug_platforms = []
+        print("[DEBUG company_detail platforms]", {"company_id": company_id, "platforms": debug_platforms})
         
         # 6) 法人绑定（展示）
         legal_persons = conn.execute(
@@ -4913,5 +4926,3 @@ async def ui_document_set_category(
 
     referer = request.headers.get("referer") or f"/ui/documents/{document_id}"
     return RedirectResponse(url=referer, status_code=302)
-
-

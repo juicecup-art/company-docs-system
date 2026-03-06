@@ -8,7 +8,7 @@
 
 ### 1. 数据库连接和查询
 
-**数据库连接文件**：[db.py](file:///d:/company-doc/app/db.py)
+**数据库连接文件**：[db.py](app/db.py)
 - 使用SQLAlchemy Core进行数据库操作
 - 连接池管理和事务处理
 - 支持MySQL风格SQL（使用NOW()和LAST_INSERT_ID()）
@@ -24,14 +24,14 @@ with engine.begin() as conn:  # 事务处理
 
 ### 2. 路由系统和注册
 
-**主路由文件**：[main.py](file:///d:/company-doc/app/main.py)
+**主路由文件**：[main.py](app/main.py)
 - 包含基础CRUD API接口
 - 路由注册顺序很重要：UI路由优先注册避免冲突
 
 **UI路由文件**：
-- [ui.py](file:///d:/company-doc/app/routers/ui.py) - 主要UI页面路由
-- [ui_pack.py](file:///d:/company-doc/app/routers/ui_pack.py) - 包装法相关功能
-- [ui_tickets.py](file:///d:/company-doc/app/routers/ui_tickets.py) - 工单系统
+- [ui.py](app/routers/ui.py) - 主要UI页面路由
+- [ui_pack.py](app/routers/ui_pack.py) - 包装法相关功能
+- [ui_tickets.py](app/routers/ui_tickets.py) - 工单系统
 
 **路由注册顺序**（重要！）：
 ```python
@@ -49,7 +49,7 @@ app.include_router(auth_router)
 
 **公司详情页数据传递**（以platforms为例）：
 
-1. **数据库查询**：[ui.py#L1815-L1835](file:///d:/company-doc/app/routers/ui.py#L1815-L1835)
+1. **数据库查询**：[ui.py#L1815-L1835](app/routers/ui.py#L1815-L1835)
 ```python
 platforms = conn.execute(
     text("""
@@ -65,7 +65,7 @@ platforms = conn.execute(
 ).mappings().all()
 ```
 
-2. **数据传递给模板**：[ui.py#L1870](file:///d:/company-doc/app/routers/ui.py#L1870)
+2. **数据传递给模板**：[ui.py#L1870](app/routers/ui.py#L1870)
 ```python
 return templates.TemplateResponse(
     "company_detail.html",
@@ -77,7 +77,7 @@ return templates.TemplateResponse(
 )
 ```
 
-3. **模板接收和处理**：[company_detail.html#L470](file:///d:/company-doc/app/templates/company_detail.html#L470)
+3. **模板接收和处理**：[company_detail.html#L470](app/templates/company_detail.html#L470)
 ```jinja2
 {% set ns = namespace(ecom=[], pay=[]) %}
 {% for p in platforms %}
@@ -120,14 +120,14 @@ return templates.TemplateResponse(
 ## 关键文件位置
 
 ### 核心文件
-- **主应用**：[main.py](file:///d:/company-doc/app/main.py)
-- **数据库连接**：[db.py](file:///d:/company-doc/app/db.py)
-- **UI路由**：[routers/ui.py](file:///d:/company-doc/app/routers/ui.py)
-- **包装法功能**：[routers/ui_pack.py](file:///d:/company-doc/app/routers/ui_pack.py)
+- **主应用**：[main.py](app/main.py)
+- **数据库连接**：[db.py](app/db.py)
+- **UI路由**：[routers/ui.py](app/routers/ui.py)
+- **包装法功能**：[routers/ui_pack.py](app/routers/ui_pack.py)
 
 ### 模板文件
-- **公司详情页**：[templates/company_detail.html](file:///d:/company-doc/app/templates/company_detail.html)
-- **基础模板**：[templates/base.html](file:///d:/company-doc/app/templates/base.html)
+- **公司详情页**：[templates/company_detail.html](app/templates/company_detail.html)
+- **基础模板**：[templates/base.html](app/templates/base.html)
 
 ### 数据模型
 - **公司表操作**：查看main.py中的Company相关API

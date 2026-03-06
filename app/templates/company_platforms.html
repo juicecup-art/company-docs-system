@@ -1,5 +1,7 @@
-{% extends "base.html" %} {% block title %}斯本贸易 - 公司平台{% endblock %} {%
-block crumb %}Companies / Platforms{% endblock %} {% block content %}
+{% extends "base.html" %} 
+{% block title %}斯本贸易 - 公司平台{% endblock %}
+{% block crumb %}Companies / Platforms{% endblock %} 
+{% block content %}
 
 <style>
   /* 本页专用：更松的层级与布局 */
@@ -163,23 +165,41 @@ block crumb %}Companies / Platforms{% endblock %} {% block content %}
   </div>
   -->
 
-  <div class="muted" style="margin-top: 12px">
-    结果：<b>{{ rows | length }}</b>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+    <div class="muted">
+      结果：<b>{{ rows | length }}</b>
+    </div>
+    <div>
+      <button id="filter-toggle" class="mini-btn">筛选</button>
+      <button id="clear-filter" class="mini-btn" style="display: none; margin-left: 8px;">清空筛选</button>
+    </div>
   </div>
 
-  <table>
+  <table id="platforms-table">
     <thead>
       <tr>
         <th style="width: 70px">ID</th>
-        <th style="width: 180px">平台</th>
-        <th>店铺链接</th>
-        <th style="width: 220px">域名</th>
-        <th style="width: 170px">创建时间</th>
+        <th style="width: 180px">
+          平台
+          <span class="sort-icon" data-column="platform" style="display: none; cursor: pointer; margin-left: 5px;">a-z</span>
+        </th>
+        <th>
+          店铺链接
+          <span class="sort-icon" data-column="store_url" style="display: none; cursor: pointer; margin-left: 5px;">a-z</span>
+        </th>
+        <th style="width: 220px">
+          域名
+          <span class="sort-icon" data-column="domain" style="display: none; cursor: pointer; margin-left: 5px;">a-z</span>
+        </th>
+        <th style="width: 170px">
+          创建时间
+          <span class="sort-icon" data-column="created_at" style="display: none; cursor: pointer; margin-left: 5px;">新-旧</span>
+        </th>
         <th style="width: 200px">操作</th>
       </tr>
     </thead>
 
-    <tbody>
+    <tbody id="platforms-tbody">
       {% for r in rows %}
       <tr>
         <td class="muted">{{ r.id }}</td>
@@ -229,5 +249,166 @@ block crumb %}Companies / Platforms{% endblock %} {% block content %}
   <p class="muted" style="margin-top: 12px">暂无平台记录。</p>
   {% endif %}
 </div>
+
+<script>
+// 排序状态管理
+let sortState = {};
+let isFilterMode = false;
+let originalRows = [];
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 保存原始数据
+    saveOriginalData();
+    
+    // 绑定筛选按钮事件
+    document.getElementById('filter-toggle').addEventListener('click', toggleFilterMode);
+    document.getElementById('clear-filter').addEventListener('click', clearAllSorting);
+    
+    // 绑定排序图标事件
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.addEventListener('click', function() {
+            handleSortClick(this.dataset.column, this);
+        });
+    });
+});
+
+// 保存原始数据
+function saveOriginalData() {
+    const tbody = document.getElementById('platforms-tbody');
+    originalRows = Array.from(tbody.querySelectorAll('tr')).map(row => ({
+        element: row.cloneNode(true),
+        platform: getPlatformText(row),
+        store_url: getCellText(row, 2),
+        domain: getCellText(row, 3),
+        created_at: getCellText(row, 4)
+    }));
+}
+
+// 获取平台文本（处理 packing_name 或 payment_name 或 platform_name）
+function getPlatformText(row) {
+    const platformCell = row.cells[1];
+    const boldElement = platformCell.querySelector('b');
+    return boldElement ? boldElement.textContent.trim() : '';
+}
+
+// 获取单元格文本
+function getCellText(row, cellIndex) {
+    return row.cells[cellIndex] ? row.cells[cellIndex].textContent.trim() : '';
+}
+
+// 切换筛选模式
+function toggleFilterMode() {
+    isFilterMode = !isFilterMode;
+    const sortIcons = document.querySelectorAll('.sort-icon');
+    const clearButton = document.getElementById('clear-filter');
+    
+    if (isFilterMode) {
+        sortIcons.forEach(icon => icon.style.display = 'inline');
+        clearButton.style.display = 'inline-block';
+        document.getElementById('filter-toggle').textContent = '退出筛选';
+    } else {
+        sortIcons.forEach(icon => icon.style.display = 'none');
+        clearButton.style.display = 'none';
+        document.getElementById('filter-toggle').textContent = '筛选';
+        clearAllSorting();
+    }
+}
+
+// 处理排序点击
+function handleSortClick(column, iconElement) {
+    // 切换排序状态
+    if (!sortState[column] || sortState[column] === 'desc') {
+        sortState[column] = 'asc';
+    } else {
+        sortState[column] = 'desc';
+    }
+    
+    // 更新图标显示
+    updateSortIcon(column, iconElement);
+    
+    // 执行排序
+    performSorting();
+}
+
+// 更新排序图标
+function updateSortIcon(column, iconElement) {
+    if (column === 'created_at') {
+        iconElement.textContent = sortState[column] === 'asc' ? '新-旧' : '旧-新';
+    } else {
+        iconElement.textContent = sortState[column] === 'asc' ? 'a-z' : 'z-a';
+    }
+}
+
+// 执行排序
+function performSorting() {
+    if (Object.keys(sortState).length === 0) {
+        restoreOriginalOrder();
+        return;
+    }
+    
+    // 获取排序列的顺序（后点击的优先级高）
+    const sortColumns = Object.keys(sortState);
+    
+    // 复制原始数据进行排序
+    let sortedRows = [...originalRows];
+    
+    // 按优先级依次排序
+    sortColumns.forEach(column => {
+        sortedRows.sort((a, b) => {
+            let aValue = a[column].toLowerCase();
+            let bValue = b[column].toLowerCase();
+            
+            // 特殊处理创建时间
+            if (column === 'created_at') {
+                aValue = new Date(a[column]);
+                bValue = new Date(b[column]);
+            }
+            
+            if (sortState[column] === 'asc') {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            } else {
+                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+            }
+        });
+    });
+    
+    // 更新表格显示
+    updateTableDisplay(sortedRows);
+}
+
+// 更新表格显示
+function updateTableDisplay(sortedRows) {
+    const tbody = document.getElementById('platforms-tbody');
+    tbody.innerHTML = '';
+    
+    sortedRows.forEach(rowData => {
+        tbody.appendChild(rowData.element.cloneNode(true));
+    });
+}
+
+// 清空所有排序
+function clearAllSorting() {
+    sortState = {};
+    
+    // 重置所有图标
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        const column = icon.dataset.column;
+        if (column === 'created_at') {
+            icon.textContent = '新-旧';
+        } else {
+            icon.textContent = 'a-z';
+        }
+    });
+    
+    // 恢复原始顺序
+    restoreOriginalOrder();
+}
+
+// 恢复原始顺序
+function restoreOriginalOrder() {
+    updateTableDisplay(originalRows);
+}
+</script>
 
 {% endblock %}

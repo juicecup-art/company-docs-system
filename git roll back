@@ -2,3 +2,4 @@ git restore --source=origin/main app/templates/company_platform_detail_pack.html
 git restore --source=origin/main app/routers/ui.py
 git restore --source=origin/main app/main.py
 git restore --source=origin/main app/templates/company_detail.html
+git restore --source=origin/main app/templates/company_platforms.html

@@ -2755,7 +2755,7 @@ async def ui_company_platforms(request: Request, company_id: int):
         rows = conn.execute(
             text(
                 """
-                SELECT id, company_id, platform_name, store_url, domain, created_at
+                SELECT id, company_id, platform_name, packing_name, payment_name, store_url, domain, created_at
                 FROM company_platforms
                 WHERE company_id=:cid
                 ORDER BY created_at DESC, id DESC
@@ -2962,6 +2962,77 @@ async def ui_company_platform_delete(request: Request, company_id: int, platform
         )
 
     return RedirectResponse(url=f"/ui/companies/{company_id}/platforms", status_code=302)
+
+@router.get("/platforms/suggest")
+def ui_platform_name_suggest(request: Request, q: str = ""):
+    current_user = _get_current_user_for_ui(request)
+    if not current_user:
+        return JSONResponse({"items": []})
+
+    qv = (q or "").strip().lower()
+    if not qv:
+        return JSONResponse({"items": []})
+
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT DISTINCT
+                    COALESCE(
+                        NULLIF(TRIM(packing_name), ''),
+                        platform_name
+                    ) AS name
+                FROM company_platforms
+                WHERE
+                  (
+                    platform_name IS NOT NULL
+                    AND TRIM(platform_name) <> ''
+                    AND LOWER(platform_name) LIKE :pat
+                  )
+                  OR (
+                    packing_name IS NOT NULL
+                    AND TRIM(packing_name) <> ''
+                    AND LOWER(packing_name) LIKE :pat
+                  )
+                ORDER BY name ASC
+                LIMIT 10
+                """
+            ),
+            {"pat": f"%{qv}%"},
+        ).fetchall()
+
+    items = [r[0] for r in rows if r[0]]
+    return JSONResponse({"items": items})
+
+
+@router.get("/payments/suggest")
+def ui_payment_name_suggest(request: Request, q: str = ""):
+    current_user = _get_current_user_for_ui(request)
+    if not current_user:
+        return JSONResponse({"items": []})
+
+    qv = (q or "").strip().lower()
+    if not qv:
+        return JSONResponse({"items": []})
+
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT DISTINCT payment_name
+                FROM company_platforms
+                WHERE payment_name IS NOT NULL
+                  AND TRIM(payment_name) <> ''
+                  AND LOWER(payment_name) LIKE :pat
+                ORDER BY payment_name ASC
+                LIMIT 10
+                """
+            ),
+            {"pat": f"%{qv}%"},
+        ).fetchall()
+
+    items = [r[0] for r in rows if r[0]]
+    return JSONResponse({"items": items})
 
 @router.post("/companies/{company_id}/platforms/{platform_id}/make-primary")
 async def ui_company_platform_make_primary(request: Request, company_id: int, platform_id: int):

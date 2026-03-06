@@ -746,30 +746,34 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
               return
             }
             const data = await resp.json()
-            const items = data.items || []
-            if (!items.length) {
-              hideList()
-              return
-            }
+            const items = (data && data.items) || []
             listEl.innerHTML = ''
-            items.forEach((name) => {
+            if (!items.length) {
               const li = document.createElement('li')
-              li.textContent = name
+              li.textContent = '无'
               li.style.padding = '4px 10px'
-              li.style.cursor = 'pointer'
-              li.addEventListener('mousedown', (e) => {
-                e.preventDefault()
-                input.value = name
-                hideList()
-              })
-              li.addEventListener('mouseover', () => {
-                li.style.background = '#f1f5f9'
-              })
-              li.addEventListener('mouseout', () => {
-                li.style.background = 'transparent'
-              })
+              li.style.color = '#9ca3af'
               listEl.appendChild(li)
-            })
+            } else {
+              items.forEach((name) => {
+                const li = document.createElement('li')
+                li.textContent = name
+                li.style.padding = '4px 10px'
+                li.style.cursor = 'pointer'
+                li.addEventListener('mousedown', (e) => {
+                  e.preventDefault()
+                  input.value = name
+                  hideList()
+                })
+                li.addEventListener('mouseover', () => {
+                  li.style.background = '#f1f5f9'
+                })
+                li.addEventListener('mouseout', () => {
+                  li.style.background = 'transparent'
+                })
+                listEl.appendChild(li)
+              })
+            }
             listEl.style.display = 'block'
           } catch (e) {
             hideList()
@@ -845,7 +849,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     attachSuggest(
       platformNameInput,
       platformSuggestList,
-      '/ui/companies/platforms/suggest'
+      '/ui/platforms/suggest'
     )
 
     const payBtn = document.getElementById('btnAddPayment')
@@ -872,7 +876,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     attachSuggest(
       paymentNameInput,
       paymentSuggestList,
-      '/ui/companies/payments/suggest'
+      '/ui/payments/suggest'
     )
 
     if (payForm) {

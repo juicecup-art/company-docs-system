@@ -185,7 +185,7 @@ block crumb %}Companies / Platforms{% endblock %} {% block content %}
         <td class="muted">{{ r.id }}</td>
 
         <td>
-          <b>{{ r.platform_name }}</b>
+          <b>{{ r.packing_name or r.payment_name or r.platform_name or 'Unknown Platform' }}</b>
           {% if primary_id == r.id %}
           <span class="pill" style="margin-left: 8px">PRIMARY</span>
           {% endif %}

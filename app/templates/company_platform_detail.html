@@ -446,7 +446,10 @@
       <div class="grid">
         <div>
           <label>平台名称</label>
-          {% if platform.payment_name %}
+          {% if platform.packing_name %}
+          <input value="{{ platform.packing_name }}"
+            disabled/>
+          {% elif platform.payment_name %}
           <input value="{{ platform.payment_name }}"
             disabled/>
           {% else %}

@@ -497,7 +497,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.packing_name or p.platform_name or 'Unknown Platform' }}</b>
+                <b>{{ p.platform_name }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -581,7 +581,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           <tr>
             <td>
               <a href="/ui/company-platforms/{{ p.platform_id }}" style="text-decoration: none; color: black">
-                <b>{{ p.packing_name or p.payment_name or p.platform_name or 'Unknown Platform' }}</b>
+                <b>{{ p.payment_name or p.platform_name }}</b>
               </a>
             </td>
             <td class="muted">{{ p.platform_email }}</td>
@@ -864,8 +864,8 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
     attachSuggest(
       paymentNameInput,
       paymentSuggestList,
-      '/ui/companies/payments/suggest'
-      '/ui/companies/platforms/suggest'
+      '/ui/payments/suggest'
+    )
 
     if (payForm) {
       payForm.addEventListener('submit', async (e) => {
@@ -892,7 +892,7 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
 
           if (payPanel) payPanel.style.display = 'none'
           payForm.reset()
-      '/ui/companies/payments/suggest'
+          location.reload()
         } catch (err) {
           alert('新增失败：网络错误')
         } finally {
@@ -904,4 +904,5 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
       })
     }
   })()
-</script>{% endblock %}
+</script>
+{% endblock %}

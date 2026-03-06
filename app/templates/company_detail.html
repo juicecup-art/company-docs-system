@@ -517,9 +517,13 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   {# =============== 新增平台（默认隐藏，点“添加平台”展开） =============== #}
   {% if can_edit %}
   <form id="addPlatformForm" method="post" action="/ui/companies/{{ company.id }}/platforms/add">
-    <div class="panel" id="addPlatformPanel" style="display:none; margin-top: 12px;">
-      <div class="form-grid">
-        <div style="position:relative;">
+    <div
+      class="panel"
+      id="addPlatformPanel"
+      style="display:none; margin-top: 12px; padding: 12px 20px;"
+    >
+      <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;">
+        <div style="position:relative; flex:1; min-width:260px;">
           <label>平台名称 *</label>
           <input
             name="platform_name"
@@ -535,17 +539,17 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           ></ul>
         </div>
 
-        <div>
+        <div style="flex:1; min-width:220px;">
           <label>平台邮箱</label>
           <input name="platform_email" placeholder="例如 login@example.com" />
         </div>
 
-        <div>
+        <div style="flex:0 0 140px;">
           <label>进度</label>
           <input name="progress" placeholder="0-100" />
         </div>
 
-        <div style="display:flex; gap:10px; align-items:flex-end;">
+        <div style="display:flex; gap:10px; align-items:flex-end; flex:0 0 auto;">
           <button class="btn" type="submit">新增平台</button>
           <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPlatform">取消</button>
         </div>
@@ -599,9 +603,13 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
   </div>
 
   <form id="addPaymentForm" method="post" action="/ui/companies/{{ company.id }}/payments/add">
-    <div class="panel" id="addPaymentPanel" style="display:none; margin-top: 12px;">
-      <div class="form-grid">
-        <div style="position:relative;">
+    <div
+      class="panel"
+      id="addPaymentPanel"
+      style="display:none; margin-top: 12px; padding: 12px 20px;"
+    >
+      <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;">
+        <div style="position:relative; flex:1; min-width:260px;">
           <label>收款平台 *</label>
           <input
             name="payment_name"
@@ -617,17 +625,17 @@ block crumb %}公司管理 / 公司详情{% endblock %} {% block content %} {% i
           ></ul>
         </div>
 
-        <div>
+        <div style="flex:1; min-width:220px;">
           <label>平台邮箱</label>
           <input name="platform_email" placeholder="例如 support@example.com" />
         </div>
 
-        <div>
+        <div style="flex:0 0 140px;">
           <label>进度</label>
           <input name="progress" placeholder="0-100" />
         </div>
 
-        <div style="display:flex; gap:10px; align-items:flex-end;">
+        <div style="display:flex; gap:10px; align-items:flex-end; flex:0 0 auto;">
           <button class="btn" type="submit">新增收款</button>
           <button type="button" class="btn btn-secondary back-ghost" id="btnCancelAddPayment">取消</button>
         </div>

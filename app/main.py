@@ -58,17 +58,19 @@ app.state.templates = Jinja2Templates(directory="app/templates")
 @app.on_event("startup")
 async def _startup_purge_task():
     asyncio.create_task(purge_loop())
-app.include_router(platforms.router)
-app.include_router(tickets_router)
+# =========================================================
+# UI routers first (to avoid route conflicts)
+app.include_router(ui_router)
+app.include_router(ui_pack_router)
 app.include_router(ui_tickets_router)
 # =========================================================
 app.include_router(admin_router)
-app.include_router(ui_router)
-app.include_router(ui_pack_router)
 app.include_router(auth_router)
 app.include_router(document_upload_router)
 app.include_router(legal_persons_router)
 app.include_router(documents_admin.router)
+app.include_router(platforms.router)
+app.include_router(tickets_router)
 # =========================================================
 # Startup / Basic Health
 # =========================================================
@@ -808,6 +810,8 @@ def list_platforms(company_id: int) -> Dict[str, Any]:
                     id,
                     company_id,
                     platform_name,
+                    packing_name,
+                    payment_name,
                     store_url,
                     domain,
                     bank_card_no,
@@ -885,7 +889,7 @@ def get_company_full(company_id: int):
 
         # 2) platforms
         platforms = conn.execute(text("""
-            SELECT id, company_id, platform_name, store_url, domain, created_at
+            SELECT id, company_id, platform_name, packing_name, payment_name, store_url, domain, created_at
             FROM company_platforms
             WHERE company_id=:company_id
             ORDER BY id DESC
